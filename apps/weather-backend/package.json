@@ -1,0 +1,9 @@
+{
+  "name": "weather-backend",
+  "private": true,
+  "scripts": {
+    "dev": "PYTHONPATH=src python app.py",
+    "test": "PYTHONPATH=src pytest -q",
+    "lint": "PYTHONPATH=src python -m compileall app.py src tests"
+  }
+}
