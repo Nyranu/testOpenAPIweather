@@ -1,8 +1,8 @@
-from weather_backend.formatters import format_forecast
-from weather_backend.models import DailyForecast, Location
+from src.weathBK.formatters import format_forecast
+from src.weathBK.models import DailyForecast, Location
 
 
-def test_format_forecast_contains_key_fields() -> None:
+def test_format() -> None:
     location = Location(name="Moscow", latitude=55.75, longitude=37.61, country="Russia")
     forecast = [
         DailyForecast(

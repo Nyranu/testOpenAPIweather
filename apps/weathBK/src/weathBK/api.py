@@ -4,7 +4,7 @@ from typing import Any
 
 import requests
 
-from weather_backend.models import DailyForecast, Location
+from .models import DailyForecast, Location
 
 GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"

@@ -1,6 +1,6 @@
-from weather_backend.api import WeatherApiError, geocode_address, get_daily_forecast
-from weather_backend.formatters import format_forecast
-from weather_backend.models import Location
+from .api import WeatherApiError, geocode_address, get_daily_forecast
+from .formatters import format_forecast
+from .models import Location
 
 
 def _read_float(prompt: str, min_value: float, max_value: float) -> float:

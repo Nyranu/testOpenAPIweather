@@ -1,4 +1,4 @@
-from weather_backend.models import DailyForecast, Location
+from .models import DailyForecast, Location
 
 WEATHER_CODE_MAP = {
     0: "Ясно",
