@@ -15,8 +15,6 @@ class WeatherApiError(RuntimeError):
 
 
 def _request_json(url: str, params: dict[str, Any]) -> dict[str, Any]:
-    """Выполняет GET-запрос и возвращает JSON с проверкой сетевых ошибок."""
-
     try:
         response = requests.get(url, params=params, timeout=10)
         response.raise_for_status()
@@ -26,8 +24,6 @@ def _request_json(url: str, params: dict[str, Any]) -> dict[str, Any]:
 
 
 def geocode_address(address: str) -> Location:
-    """Преобразует адрес в координаты и возвращает лучшую найденную локацию."""
-
     data = _request_json(
         GEOCODING_URL,
         {
@@ -53,8 +49,6 @@ def geocode_address(address: str) -> Location:
 
 
 def get_daily_forecast(latitude: float, longitude: float, days: int = 7) -> list[DailyForecast]:
-    """Получает ежедневный прогноз Open-Meteo на заданное число дней."""
-
     data = _request_json(
         FORECAST_URL,
         {

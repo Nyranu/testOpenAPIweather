@@ -22,14 +22,9 @@ WEATHER_CODE_MAP = {
 
 
 def weather_code_to_text(code: int) -> str:
-    """Человекочитаемое описание погодного кода Open-Meteo."""
-
     return WEATHER_CODE_MAP.get(code, f"Неизвестный код ({code})")
 
-
 def format_location(location: Location) -> str:
-    """Собирает заголовок с информацией о выбранной локации."""
-
     parts = [location.name]
     if location.admin1:
         parts.append(location.admin1)
@@ -40,7 +35,7 @@ def format_location(location: Location) -> str:
 
 
 def format_forecast(location: Location, forecast: list[DailyForecast]) -> str:
-    """Формирует итоговый текстовый отчёт для консоли."""
+    """Итг отчет"""
 
     lines = [f"Прогноз для: {format_location(location)}", "-" * 72]
     for day in forecast:
@@ -48,8 +43,8 @@ def format_forecast(location: Location, forecast: list[DailyForecast]) -> str:
             [
                 f"{day.date}: {weather_code_to_text(day.weather_code)}",
                 f"  Температура: {day.temp_min:.1f}°C .. {day.temp_max:.1f}°C",
-                f"  Осадки (вероятность max): {day.precipitation_probability_max:.0f}%",
-                f"  Ветер (max): {day.wind_speed_max:.1f} км/ч",
+                f"  Осадки до: {day.precipitation_probability_max:.0f}%",
+                f"  Ветер до: {day.wind_speed_max:.1f} км/ч",
                 "",
             ]
         )

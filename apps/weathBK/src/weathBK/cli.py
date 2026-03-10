@@ -4,8 +4,6 @@ from .models import Location
 
 
 def _read_float(prompt: str, min_value: float, max_value: float) -> float:
-    """Чтение числа с проверкой диапазона."""
-
     while True:
         raw = input(prompt).strip().replace(",", ".")
         try:
@@ -21,22 +19,18 @@ def _read_float(prompt: str, min_value: float, max_value: float) -> float:
 
 
 def _read_days() -> int:
-    """Запрашивает число дней прогноза в допустимом диапазоне 5-7."""
-
     while True:
-        raw = input("На сколько дней нужен прогноз? (5-7): ").strip()
-        if raw.isdigit() and 5 <= int(raw) <= 7:
+        raw = input("На сколько дней нужен прогноз? (3-7): ").strip()
+        if raw.isdigit() and 3 <= int(raw) <= 7:
             return int(raw)
-        print("Введите целое число от 5 до 7.")
+        print("Введите целое число от 3 до 7.")
 
 
 def _input_location() -> Location:
-    """Позволяет выбрать источник координат: прямой ввод или геокодинг адреса."""
-
     while True:
         print("Выберите способ ввода локации:")
-        print("1 — По координатам (широта/долгота)")
-        print("2 — По адресу")
+        print("1 По координатам (широта/долгота)")
+        print("2 По адресу")
 
         choice = input("Ваш выбор (1/2): ").strip()
 
@@ -56,9 +50,7 @@ def _input_location() -> Location:
 
 
 def run_cli() -> None:
-    """Основной сценарий консольного приложения."""
-
-    print("=== Weather CLI Monolith (Open-Meteo) ===")
+    print("=== Метериологическая программа '"'Солнышко'"' ===")
 
     try:
         location = _input_location()

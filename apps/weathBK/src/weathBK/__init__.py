@@ -1,1 +1,1 @@
-"""Weather backend package (monolith core)."""
+"""Weather backend package"""
