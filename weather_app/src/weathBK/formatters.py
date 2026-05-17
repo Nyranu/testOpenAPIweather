@@ -21,11 +21,11 @@ WEATHER_CODE_MAP = {
 }
 
 
-def weather_code_to_text(code: int) -> str:
+def weatherCodeToText(code: int) -> str:
     return WEATHER_CODE_MAP.get(code, f"Неизвестный код ({code})")
 
 
-def format_location(location: Location) -> str:
+def formatLocation(location: Location) -> str:
     parts = [location.name]
     if location.admin1:
         parts.append(location.admin1)
@@ -35,14 +35,14 @@ def format_location(location: Location) -> str:
     return ", ".join(parts)
 
 
-def format_forecast(location: Location, forecast: list[DailyForecast]) -> str:
+def formatForecast(location: Location, forecast: list[DailyForecast]) -> str:
     """Итоговый отчёт."""
 
-    lines = [f"Прогноз для: {format_location(location)}", "-" * 72]
+    lines = [f"Прогноз для: {formatLocation(location)}", "-" * 72]
     for day in forecast:
         lines.extend(
             [
-                f"{day.date}: {weather_code_to_text(day.weather_code)}",
+                f"{day.date}: {weatherCodeToText(day.weather_code)}",
                 f"  Температура: {day.temp_min:.1f}°C .. {day.temp_max:.1f}°C",
                 f"  Осадки до: {day.precipitation_probability_max:.0f}%",
                 f"  Ветер до: {day.wind_speed_max:.1f} км/ч",

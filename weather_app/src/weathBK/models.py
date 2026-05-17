@@ -3,8 +3,6 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class Location:
-    """Описание локации"""
-
     name: str
     latitude: float
     longitude: float
@@ -14,8 +12,6 @@ class Location:
 
 @dataclass(frozen=True)
 class DailyForecast:
-    """Нормализованная дневная запись"""
-
     date: str
     weather_code: int
     temp_min: float

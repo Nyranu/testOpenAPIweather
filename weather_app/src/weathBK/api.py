@@ -24,7 +24,7 @@ class WeatherApiError(RuntimeError):
     """Ошибка взаимодействия с погодным API."""
 
 
-def _request_json(url: str, params: dict[str, Any]) -> dict[str, Any]:
+def _requestJson(url: str, params: dict[str, Any]) -> dict[str, Any]:
     try:
         response = requests.get(url, params=params, timeout=10)
         response.raise_for_status()
@@ -46,8 +46,8 @@ def _request_json(url: str, params: dict[str, Any]) -> dict[str, Any]:
     return data
 
 
-def geocode_address(address: str) -> Location:
-    data = _request_json(
+def geocodeAddress(address: str) -> Location:
+    data = _requestJson(
         GEOCODING_URL,
         {
             "name": address,
@@ -74,8 +74,8 @@ def geocode_address(address: str) -> Location:
     )
 
 
-def get_daily_forecast(latitude: float, longitude: float, days: int = 7) -> list[DailyForecast]:
-    data = _request_json(
+def getDailyForecast(latitude: float, longitude: float, days: int = 7) -> list[DailyForecast]:
+    data = _requestJson(
         FORECAST_URL,
         {
             "latitude": latitude,
@@ -102,10 +102,10 @@ def get_daily_forecast(latitude: float, longitude: float, days: int = 7) -> list
         if not isinstance(value, Sequence) or isinstance(value, (str, bytes, bytearray)):
             raise WeatherApiError(f"Поле daily '{field}' имеет некорректный тип: {type(value).__name__}")
 
-    field_lengths = {field: len(daily[field]) for field in REQUIRED_DAILY_FIELDS}
-    unique_lengths = set(field_lengths.values())
-    if len(unique_lengths) != 1:
-        details = ", ".join(f"{field}={length}" for field, length in field_lengths.items())
+    FieldLengths = {field: len(daily[field]) for field in REQUIRED_DAILY_FIELDS}
+    UniqueLengths = set(FieldLengths.values())
+    if len(UniqueLengths) != 1:
+        details = ", ".join(f"{field}={length}" for field, length in FieldLengths.items())
         raise WeatherApiError(f"Поля daily в ответе API имеют разную длину: {details}")
 
     records = zip(
