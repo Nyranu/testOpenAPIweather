@@ -50,7 +50,7 @@ def _input_location() -> Location:
 
 
 def run_cli() -> None:
-    print("=== Метериологическая программа '"'Солнышко'"' ===")
+    print("=== Метеорологическая программа '"'Солнышко'"' ===")
 
     try:
         location = _input_location()
