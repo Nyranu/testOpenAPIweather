@@ -7,12 +7,16 @@ from typing import Optional
 
 
 class TaskStatus(StrEnum):
+    """Допустимые статусы задачи."""
+
     NOT_STARTED = "Не начата"
     IN_PROGRESS = "В процессе"
     COMPLETED = "Завершена"
 
 
 class TaskPriority(StrEnum):
+    """Допустимые уровни приоритета задачи."""
+
     LOW = "Низкий"
     MEDIUM = "Средний"
     HIGH = "Высокий"
@@ -20,6 +24,8 @@ class TaskPriority(StrEnum):
 
 @dataclass(slots=True)
 class Task:
+    """Основная модель задачи для backend-ядра."""
+
     id: int
     title: str
     description: str = ""
@@ -35,6 +41,8 @@ class Task:
 
 @dataclass(slots=True)
 class TaskCreate:
+    """Входные данные для создания задачи."""
+
     title: str
     description: str = ""
     status: Optional[str] = None
@@ -46,6 +54,8 @@ class TaskCreate:
 
 @dataclass(slots=True)
 class TaskUpdate:
+    """Входные данные для частичного обновления задачи."""
+
     title: Optional[str] = None
     description: Optional[str] = None
     status: Optional[str] = None
@@ -53,10 +63,14 @@ class TaskUpdate:
     priority: Optional[str] = None
     estimated_minutes: Optional[int] = None
     tags: Optional[list[str]] = None
+    clear_due_date: bool = False
+    clear_estimated_minutes: bool = False
 
 
 @dataclass(slots=True)
 class HistoryRecord:
+    """Запись об операции над задачей."""
+
     id: int
     created_at: datetime
     action: str
