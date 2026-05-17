@@ -1,10 +1,7 @@
 """
-Файл services.py.
+Самая ВАЖНАЯ для тебя вкладка - СЕРВИСЫ которые я натылка тут, они твое все и твоя вся
 
-Здесь находится основная бизнес-логика менеджера задач:
-создание, обновление, удаление, фильтрация и история действий.
-
-Фронтенд должен вызывать эти классы, а не работать с хранилищами напрямую.
+ТЫ ДОЛЖЕН ВЫЗЫВАТЬ ИМЕННО ЭТИ КЛАССЫ - НЕ РАБОТАЙ С ХРАНИЛИЩЕМ НАПРЯМУЮ!!!! - ЕСЛИ УВИЖУ ~~~~
 """
 
 from __future__ import annotations
@@ -14,12 +11,10 @@ from datetime import UTC, date, datetime
 
 from .exceptions import InvalidPriorityError, InvalidStatusError, TaskNotFoundError, ValidationError
 from .models import HistoryRecord, Task, TaskCreate, TaskPriority, TaskStatus, TaskUpdate
-from .repositories import HistoryRepo, TaskRepo
+from .repomemory import HistoryRepo, TaskRepo
 
-
+# Класс для работы с иторие - добавляет, читает, чистит
 class History:
-    """Класс для добавления, чтения и очистки истории действий."""
-
     def __init__(self, Repo: HistoryRepo) -> None:
         self.Repo = Repo
         self._nextId = 1
@@ -35,30 +30,29 @@ class History:
     def clearHistory(self) -> None:
         self.Repo.clear()
 
-
+# Управляет задачами и проверками данных
 class TaskManager:
-    """Главный класс управления задачами и проверками данных."""
-
     def __init__(self, TaskRepoObj: TaskRepo, HistoryObj: History) -> None:
         self.TaskRepoObj = TaskRepoObj
         self.HistoryObj = HistoryObj
         self._nextId = 1
 
+    # Эте ВАЛИДОЛ - проверяет статусы приоритеты время и если что возвращаетт прикол
     def _validateStatus(self, Status: str) -> None:
         if Status not in [s.value for s in TaskStatus]:
             raise InvalidStatusError(Status)
-
     def _validatePriority(self, Priority: str) -> None:
         if Priority not in [p.value for p in TaskPriority]:
             raise InvalidPriorityError(Priority)
-
     def _validateEstimatedMinutes(self, EstimatedMinutes: int | None) -> None:
         if EstimatedMinutes is not None and EstimatedMinutes <= 0:
-            raise ValidationError("EstimatedMinutes must be greater than 0")
+            raise ValidationError("EstimatedMinutes - ДОЛЖНО БЫТЬ БОЛЬШЕ 0")
 
+    # Твоя любимая конструкция - ее как раз и используй для создания всего сюда по сути ты как раз и передаешь модуль создания
+    # как его в обще его создавать и тк есть в адаптаре
     def createTask(self, Data: TaskCreate) -> Task:
         if not Data.Title or not Data.Title.strip():
-            raise ValidationError("Task Title cannot be empty")
+            raise ValidationError("Задача должна иметь имя")
         Status = Data.Status or TaskStatus.NOT_STARTED.value
         Priority = Data.Priority or TaskPriority.MEDIUM.value
         self._validateStatus(Status)
@@ -85,12 +79,14 @@ class TaskManager:
         self.HistoryObj.addHistory("createTask", TaskItem.Id, TaskItem.Title, f"Создана задача со статусом {TaskItem.Status}")
         return TaskItem
 
+    # Поиск таска по id
     def getTask(self, TaskId: int) -> Task:
         TaskItem = self.TaskRepoObj.get(TaskId)
         if not TaskItem:
-            raise TaskNotFoundError(f"Task {TaskId} not found")
+            raise TaskNotFoundError(f"Задача с {TaskId} не найдена")
         return TaskItem
 
+    # Короче тут уже идет возврат задач, но с фильтрами - статус, приоритет, дедлик, поиск
     def listTasks(self, Status: str | None = None, Priority: str | None = None, OverdueOnly: bool = False, Search: str | None = None) -> list[Task]:
         TaskList = self.TaskRepoObj.list()
         if Status:
@@ -107,6 +103,7 @@ class TaskManager:
             TaskList = [t for t in TaskList if Query in t.Title.lower() or Query in t.Description.lower()]
         return TaskList
 
+    # Обновляет задачи по его id - ВАЖНО: ОНО УЧИТЫВАЕТ ТЕГИ ОЧИСТКИ ПОЛЕЙ
     def updateTask(self, TaskId: int, Data: TaskUpdate) -> Task:
         OldTask = self.getTask(TaskId)
         NewTask = replace(OldTask)
@@ -133,7 +130,7 @@ class TaskManager:
             NewTask.Priority = Data.Priority
 
         if not NewTask.Title.strip():
-            raise ValidationError("Task Title cannot be empty")
+            raise ValidationError("Название задачи пустое(")
         self._validateEstimatedMinutes(NewTask.EstimatedMinutes)
 
         if NewTask.Status == TaskStatus.COMPLETED.value and OldTask.Status != TaskStatus.COMPLETED.value:
@@ -146,17 +143,20 @@ class TaskManager:
         self.HistoryObj.addHistory("updateTask", NewTask.Id, NewTask.Title, "Обновлены поля задачи")
         return NewTask
 
+    # Удаляет по id задачу
     def deleteTask(self, TaskId: int) -> bool:
         TaskItem = self.getTask(TaskId)
         Deleted = self.TaskRepoObj.delete(TaskId)
         self.HistoryObj.addHistory("deleteTask", TaskItem.Id, TaskItem.Title, "Задача удалена")
         return Deleted
 
+    # А это твои хелпики они помогают точечно изменить некоторые данные задачи а также завершить или вернуть по завершению
+    # Изменить статус задачи по id
     def changeStatus(self, TaskId: int, Status: str) -> Task:
         return self.updateTask(TaskId, TaskUpdate(Status=Status))
-
+    # Переводит задачу в завершенные
     def completeTask(self, TaskId: int) -> Task:
         return self.changeStatus(TaskId, TaskStatus.COMPLETED.value)
-
+    # И наоборот переводит задачу в еще в процессе
     def reopenTask(self, TaskId: int) -> Task:
         return self.changeStatus(TaskId, TaskStatus.IN_PROGRESS.value)

@@ -1,10 +1,8 @@
 """
-Файл models.py.
+Основные модели данных как и что содержат, можешь некоторые пункты дополнить, но нужно будет по аналогии также
+дополнить и в остальных где они используются но там все просто - просто копируй как там где они используются
 
-Здесь описаны структуры данных backend-ядра: модели задач,
-данные для создания/обновления, статусы, приоритеты и история действий.
-
-Файл не содержит бизнес-логику и не работает с хранилищем.
+Там где в переменной Optional - означает что значение опциональное и не обязательное
 """
 
 from __future__ import annotations
@@ -14,83 +12,63 @@ from datetime import UTC, date, datetime
 from enum import StrEnum
 from typing import Optional
 
-
+# Статусы
 class TaskStatus(StrEnum):
-    """
-    Статусы жизненного цикла задачи.
-
-    Используются сервисами и фронтендом для единых значений.
-    """
-
     NOT_STARTED = "Не начата"
     IN_PROGRESS = "В процессе"
     COMPLETED = "Завершена"
 
-
+# Приоритет
 class TaskPriority(StrEnum):
-    """
-    Уровни приоритета задачи.
-
-    Нужны для сортировки, фильтрации и планирования.
-    """
-
     LOW = "Низкий"
     MEDIUM = "Средний"
     HIGH = "Высокий"
 
-
+# Основная МОДЕЛЬ ЗАДАЧИ - то что и с чем ты работаешь на стороне бекенда трындец какая важная штука - ее не трогать
 @dataclass(slots=True)
 class Task:
-    """Основная модель одной задачи в backend-ядре."""
+    Id: int
+    Title: str
+    Description: str = ""
+    Status: str = TaskStatus.NOT_STARTED.value
+    DueDate: Optional[date] = None  # Дедлайн
+    CreatedAt: datetime = field(default_factory=lambda: datetime.now(UTC))  # Дата создания
+    UpdatedAt: datetime = field(default_factory=lambda: datetime.now(UTC))  # Дата последнего изменения
+    CompletedAt: Optional[datetime] = None  # Когда задача завершена
+    Priority: str = TaskPriority.MEDIUM.value
+    EstimatedMinutes: Optional[int] = None  # Оценка длительности в минутах
+    Tags: list[str] = field(default_factory=list)  # Теги для группировки
 
-    Id: int  # Уникальный идентификатор задачи внутри backend.
-    Title: str  # Короткое название задачи.
-    Description: str = ""  # Подробное описание задачи.
-    Status: str = TaskStatus.NOT_STARTED.value  # Текущий статус выполнения.
-    DueDate: Optional[date] = None  # Дедлайн, если задан.
-    CreatedAt: datetime = field(default_factory=lambda: datetime.now(UTC))  # Дата создания.
-    UpdatedAt: datetime = field(default_factory=lambda: datetime.now(UTC))  # Дата последнего изменения.
-    CompletedAt: Optional[datetime] = None  # Когда задача завершена.
-    Priority: str = TaskPriority.MEDIUM.value  # Приоритет задачи.
-    EstimatedMinutes: Optional[int] = None  # Оценка длительности в минутах.
-    Tags: list[str] = field(default_factory=list)  # Текстовые метки для группировки.
-
-
+# Его ты будешь постоянно использовать - модель для создания задачи - входные данные
 @dataclass(slots=True)
 class TaskCreate:
-    """Входные данные для создания новой задачи."""
+    Title: str  #Название новой задачи
+    Description: str = ""  #Описание новой задачи
+    Status: Optional[str] = None  #Начальный статус
+    DueDate: Optional[date] = None  #Ддедлайн
+    Priority: Optional[str] = None  #Приоритет
+    EstimatedMinutes: Optional[int] = None  #Оценка времени
+    Tags: list[str] = field(default_factory=list)  # Теги
 
-    Title: str  # Название новой задачи.
-    Description: str = ""  # Описание новой задачи.
-    Status: Optional[str] = None  # Опциональный начальный статус.
-    DueDate: Optional[date] = None  # Опциональный дедлайн.
-    Priority: Optional[str] = None  # Опциональный приоритет.
-    EstimatedMinutes: Optional[int] = None  # Опциональная оценка времени.
-    Tags: list[str] = field(default_factory=list)  # Опциональные метки.
-
-
+# Модель для обновления данных
 @dataclass(slots=True)
 class TaskUpdate:
-    """Данные для частичного обновления существующей задачи."""
+    Title: Optional[str] = None
+    Description: Optional[str] = None
+    Status: Optional[str] = None
+    DueDate: Optional[date] = None
+    Priority: Optional[str] = None
+    EstimatedMinutes: Optional[int] = None
+    Tags: Optional[list[str]] = None
+    ClearDueDate: bool = False  # Явно очистить дедлайна
+    ClearEstimatedMinutes: bool = False  # Явная очистка времени
 
-    Title: Optional[str] = None  # Новое название.
-    Description: Optional[str] = None  # Новое описание.
-    Status: Optional[str] = None  # Новый статус.
-    DueDate: Optional[date] = None  # Новый дедлайн.
-    Priority: Optional[str] = None  # Новый приоритет.
-    EstimatedMinutes: Optional[int] = None  # Новая оценка в минутах.
-    Tags: Optional[list[str]] = None  # Новый набор меток.
-    ClearDueDate: bool = False  # Явно очистить дедлайн.
-    ClearEstimatedMinutes: bool = False  # Явно очистить оценку времени.
-
-
+#Запись об одном действии который совершилл пользователь над задачей - модель для логов/истории
 @dataclass(slots=True)
 class HistoryRecord:
-    """Запись об одном действии пользователя над задачами."""
-
-    Id: int  # Уникальный id записи истории.
-    CreatedAt: datetime  # Время создания записи.
-    Action: str  # Имя действия (createTask, updateTask и т.д.).
-    TaskId: Optional[int] = None  # id связанной задачи.
-    TaskTitle: Optional[str] = None  # Заголовок связанной задачи.
-    Details: Optional[str] = None  # Дополнительное пояснение действия.
+    Id: int
+    CreatedAt: datetime
+    Action: str  # Действие
+    TaskId: Optional[int] = None
+    TaskTitle: Optional[str] = None
+    Details: Optional[str] = None  # Доп обьяснения

@@ -2,12 +2,13 @@
 Пример ручного использования backend-ядра без PyQt6-фронтенда.
 """
 from datetime import date, timedelta
+from chartsTask import Charts
+from statisticsTask import Statistics
+from models import TaskCreate, TaskPriority, TaskStatus
+from repomemory import InMemoryHistoryRepo, InMemoryTaskRepo
+from services import History, TaskManager
 
-from backend.charts import Charts
-from backend.models import TaskCreate, TaskPriority, TaskStatus
-from backend.repositories import InMemoryHistoryRepo, InMemoryTaskRepo
-from backend.services import History, TaskManager
-from backend.statistics import Statistics
+
 
 
 def main() -> None:
@@ -24,22 +25,22 @@ def main() -> None:
     TaskManagerObj.completeTask(1)
     TaskManagerObj.deleteTask(Task4.Id)
 
-    print("Tasks:")
+    print("ЗАДАЧИ:")
     for TaskItem in TaskManagerObj.listTasks():
         print(TaskItem)
 
-    print("\nHistory:")
+    print("\nХистори:")
     for Record in HistoryObj.listHistory(Limit=20):
         print(Record)
 
     Stats = Statistics().getSummary(TaskManagerObj.listTasks(), HistoryCount=len(HistoryObj.listHistory(Limit=1000)))
-    print("\nStats:", Stats)
+    print("\nСтатусы:", Stats)
 
     try:
         ChartPath = Charts().createStatusPieChart(TaskManagerObj.listTasks())
-        print("Chart:", ChartPath)
+        print("Граф:", ChartPath)
     except RuntimeError as Error:
-        print("Chart skipped:", Error)
+        print("увы:", Error)
 
 
 if __name__ == "__main__":

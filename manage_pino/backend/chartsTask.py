@@ -1,41 +1,36 @@
 """
-Файл charts.py.
-
-Здесь находится сервис построения графиков по задачам через matplotlib.
-Сервис не запускает GUI и сохраняет графики в PNG-файлы.
+Я примерно сделал несколько заготовок для графиков через matplotlib, постарайся обойтись ими, он также сохраняет из в png может возвращать путь и тд
 """
 
 from __future__ import annotations
-
 from pathlib import Path
-
 from .models import Task
-from .statistics import Statistics
-from .time_management import TimeManagement
+from .statisticsTask import Statistics
+from .timeManagement import TimeManagement
 
 try:
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-except ImportError:  # pragma: no cover
+except ImportError:
     matplotlib = None
     plt = None
 
-
+#Основной класс для вызова на построение и сохранение графиков
 class Charts:
-    """Сервис построения и сохранения графиков по задачам."""
 
     def __init__(self) -> None:
         if plt is None:
-            raise RuntimeError("Для создания графиков требуется matplotlib")
+            raise RuntimeError("Для создания графика нужек matplotlib")
         self.StatisticsObj = Statistics()
         self.TimeManagementObj = TimeManagement()
 
+    #Возвращает путь для файла графика и делает папку если нужно
     def _outputFile(self, Name: str, OutputPath: str | None) -> Path:
         Base = Path(OutputPath) if OutputPath else Path(__file__).resolve().parent / "output" / "charts"
         Base.mkdir(parents=True, exist_ok=True)
         return Base / Name
-
+    # Cоздает пустой график
     def _emptyPlot(self, Title: str, PathObj: Path) -> str:
         plt.figure(figsize=(6, 4))
         plt.text(0.5, 0.5, "Нет данных", ha="center", va="center")
@@ -46,6 +41,7 @@ class Charts:
         plt.close()
         return str(PathObj)
 
+    # Строит круговою диаграмму - она распределяет задачи по статусам
     def createStatusPieChart(self, Tasks: list[Task], OutputPath: str | None = None) -> str:
         PathObj = self._outputFile("status_pie.png", OutputPath)
         Data = self.StatisticsObj.getStatusDistribution(Tasks)
@@ -59,6 +55,7 @@ class Charts:
         plt.close()
         return str(PathObj)
 
+    # Делает столбик - распределяет по приоритету
     def createPriorityBarChart(self, Tasks: list[Task], OutputPath: str | None = None) -> str:
         PathObj = self._outputFile("priority_bar.png", OutputPath)
         Data = self.StatisticsObj.getPriorityDistribution(Tasks)
@@ -72,6 +69,7 @@ class Charts:
         plt.close()
         return str(PathObj)
 
+    #  Делает также стобик но распределеяет уже по дедлайну
     def createDeadlineBarChart(self, Tasks: list[Task], OutputPath: str | None = None) -> str:
         PathObj = self._outputFile("deadline_bar.png", OutputPath)
         Data = self.StatisticsObj.getDeadlineDistribution(Tasks)
@@ -85,6 +83,7 @@ class Charts:
         plt.close()
         return str(PathObj)
 
+    # Строит линейный график - какая нагрузка будет на данный день/дни
     def createWorkloadChart(self, Tasks: list[Task], Days: int = 7, OutputPath: str | None = None) -> str:
         PathObj = self._outputFile("workload.png", OutputPath)
         Data = self.TimeManagementObj.getWorkloadByDay(Tasks, Days)

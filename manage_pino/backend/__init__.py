@@ -1,22 +1,13 @@
 """
-Пакет backend.
-
-Этот файл собирает основные классы backend-ядра в одном месте.
-Благодаря этому другие части проекта могут делать короткие импорты:
-
-    from backend import TaskManager, TaskCreate
-
-Здесь не должно быть бизнес-логики — только реэкспорт.
+Чтобы импортировать тебе файл из бекенда просто пропиши что-то типа:
+from backend import TaskManager, TaskCreate
 """
 
-# Явные импорты для основных классов backend-ядра.
-from .charts import Charts
+from .chartsTask import Charts
 from .services import History, TaskManager
-from .statistics import Statistics
-from .time_management import TimeManagement
-
-# Wildcard-реэкспорты оставлены для совместимости с ранним API пакета.
+from .statisticsTask import Statistics
+from .timeManagement import TimeManagement
 from .adapters import *
 from .exceptions import *
 from .models import *
-from .repositories import *
+from .repomemory import *

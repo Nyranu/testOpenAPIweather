@@ -1,8 +1,7 @@
 """
-Файл time_management.py.
+пу-пу
+Сервис для выборок и планирвоания задач по времени - самый важный по сути
 
-Содержит функции для планирования задач по времени:
-просрочка, задачи на сегодня, ближайшие дедлайны и дневной план.
 """
 
 from __future__ import annotations
@@ -13,24 +12,24 @@ from .models import Task, TaskPriority, TaskStatus
 
 
 class TimeManagement:
-    """Сервис для выборок и планирования задач по времени."""
 
+    # Возвращает незавершенные задачи с истекшим дедликом
     def getOverdueTasks(self, Tasks: list[Task]) -> list[Task]:
         Today = date.today()
         return [TaskItem for TaskItem in Tasks if TaskItem.DueDate and TaskItem.DueDate < Today and TaskItem.Status != TaskStatus.COMPLETED.value]
-
+    # Незавершенные задачи на сегодня
     def getTodayTasks(self, Tasks: list[Task]) -> list[Task]:
         Today = date.today()
         return [TaskItem for TaskItem in Tasks if TaskItem.DueDate == Today and TaskItem.Status != TaskStatus.COMPLETED.value]
-
+    # Незавершенные задачи на блишайшие дни - указывай в дайс по базе 7
     def getUpcomingTasks(self, Tasks: list[Task], Days: int = 7) -> list[Task]:
         Today = date.today()
         End = Today + timedelta(days=Days)
         return [TaskItem for TaskItem in Tasks if TaskItem.DueDate and Today < TaskItem.DueDate <= End and TaskItem.Status != TaskStatus.COMPLETED.value]
-
+    # Возвращает завершенные задачи
     def getCompletedTasks(self, Tasks: list[Task]) -> list[Task]:
         return [TaskItem for TaskItem in Tasks if TaskItem.Status == TaskStatus.COMPLETED.value]
-
+    # Возвращает именно сумму нагрузки по дням в минутах
     def getWorkloadByDay(self, Tasks: list[Task], Days: int = 7) -> dict[str, int]:
         Today = date.today()
         Result = {str(Today + timedelta(days=Index)): 0 for Index in range(Days)}
@@ -38,14 +37,14 @@ class TimeManagement:
             if TaskItem.DueDate and str(TaskItem.DueDate) in Result and TaskItem.Status != TaskStatus.COMPLETED.value:
                 Result[str(TaskItem.DueDate)] += TaskItem.EstimatedMinutes or 30
         return Result
-
+    # сортирует по дедлику задачи - ВАЖНО: ЗАДАЧИ БЕЗ СРОКА ЗАПИСЫВАЮТСЯ В КОНЕЦ
     def sortByDeadline(self, Tasks: list[Task]) -> list[Task]:
         return sorted(Tasks, key=lambda TaskItem: (TaskItem.DueDate is None, TaskItem.DueDate or date.max))
-
+    # Сортирует по приоритету - высоки-средний-низкий
     def sortByPriority(self, Tasks: list[Task]) -> list[Task]:
         Order = {TaskPriority.HIGH.value: 0, TaskPriority.MEDIUM.value: 1, TaskPriority.LOW.value: 2}
         return sorted(Tasks, key=lambda TaskItem: Order.get(TaskItem.Priority, 99))
-
+    # Определяет какая задача самая срочная
     def getTaskUrgency(self, TaskItem: Task) -> str:
         if TaskItem.Status == TaskStatus.COMPLETED.value:
             return "completed"
@@ -60,6 +59,7 @@ class TimeManagement:
             return "soon"
         return "normal"
 
+    # А это мой небольшой фаворит - Предлагает план на день по приоритетам и доступному времени его можно хоть так запихнуть, штука прям кайфовая вышла
     def suggestDailyPlan(self, Tasks: list[Task], AvailableMinutes: int = 240) -> list[Task]:
         Filtered = [TaskItem for TaskItem in Tasks if TaskItem.Status != TaskStatus.COMPLETED.value]
         Overdue = self.getOverdueTasks(Filtered)
