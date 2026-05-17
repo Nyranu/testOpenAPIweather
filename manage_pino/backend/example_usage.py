@@ -1,14 +1,6 @@
 """
 Пример ручного использования backend-ядра без PyQt6-фронтенда.
-
-Запускать из папки manage_pino:
-
-    python -m backend.example_usage
-
-Файл показывает создание сервисов, операции с задачами, историю,
-статистику и генерацию графика.
 """
-
 from datetime import date, timedelta
 
 from backend.charts import Charts
@@ -19,32 +11,35 @@ from backend.statistics import Statistics
 
 
 def main() -> None:
-    task_repo = InMemoryTaskRepo()
-    history_repo = InMemoryHistoryRepo()
-    HistoryObj = History(history_repo)
-    service = TaskManager(task_repo, HistoryObj)
+    TaskRepoObj = InMemoryTaskRepo()
+    HistoryRepoObj = InMemoryHistoryRepo()
+    HistoryObj = History(HistoryRepoObj)
+    TaskManagerObj = TaskManager(TaskRepoObj, HistoryObj)
 
-    service.createTask(TaskCreate(Title="Подготовить отчет", "Финансы", DueDate=date.today(), EstimatedMinutes=90))
-    service.createTask(TaskCreate(Title="Купить продукты", DueDate=date.today() + timedelta(days=1), Priority=TaskPriority.HIGH.value))
-    service.createTask(TaskCreate(Title="Прочитать книгу", Priority=TaskPriority.LOW.value))
-    t4 = service.createTask(TaskCreate(Title="Сделать презентацию", DueDate=date.today() - timedelta(days=1), Status=TaskStatus.IN_PROGRESS.value))
+    TaskManagerObj.createTask(TaskCreate(Title="Подготовить отчет", Description="Финансы", DueDate=date.today(), EstimatedMinutes=90))
+    TaskManagerObj.createTask(TaskCreate(Title="Купить продукты", DueDate=date.today() + timedelta(days=1), Priority=TaskPriority.HIGH.value))
+    TaskManagerObj.createTask(TaskCreate(Title="Прочитать книгу", Priority=TaskPriority.LOW.value))
+    Task4 = TaskManagerObj.createTask(TaskCreate(Title="Сделать презентацию", DueDate=date.today() - timedelta(days=1), Status=TaskStatus.IN_PROGRESS.value))
 
-    service.completeTask(1)
-    service.deleteTask(t4.Id)
+    TaskManagerObj.completeTask(1)
+    TaskManagerObj.deleteTask(Task4.Id)
 
     print("Tasks:")
-    for task in service.listTasks():
-        print(task)
+    for TaskItem in TaskManagerObj.listTasks():
+        print(TaskItem)
 
     print("\nHistory:")
-    for record in HistoryObj.listHistory(limit=20):
-        print(record)
+    for Record in HistoryObj.listHistory(Limit=20):
+        print(Record)
 
-    StatisticsObj = Statistics().getSummary(service.listTasks(), HistoryCount=len(HistoryObj.listHistory(1000)))
-    print("\nStats:", stats)
+    Stats = Statistics().getSummary(TaskManagerObj.listTasks(), HistoryCount=len(HistoryObj.listHistory(Limit=1000)))
+    print("\nStats:", Stats)
 
-    chart = Charts().createStatusPieChart(service.listTasks())
-    print("Chart:", chart)
+    try:
+        ChartPath = Charts().createStatusPieChart(TaskManagerObj.listTasks())
+        print("Chart:", ChartPath)
+    except RuntimeError as Error:
+        print("Chart skipped:", Error)
 
 
 if __name__ == "__main__":

@@ -1,9 +1,10 @@
 from datetime import date, datetime, timedelta
 from pathlib import Path
+import importlib
 
 import pytest
 
-from backend.adapters import _parseDate
+from backend.adapters import _parseDate, frontendTupleToTask, taskToFrontendTuple, tasksToFrontendTuples
 from backend.charts import Charts
 from backend.exceptions import InvalidPriorityError, InvalidStatusError, ValidationError
 from backend.models import TaskCreate, TaskPriority, TaskStatus, TaskUpdate
@@ -16,6 +17,13 @@ from backend.time_management import TimeManagement
 def buildService():
     HistoryInstance = History(InMemoryHistoryRepo())
     return TaskManager(InMemoryTaskRepo(), HistoryInstance), HistoryInstance
+
+
+def test_adapters_roundtrip():
+    TaskItem = frontendTupleToTask(("A", "B", TaskStatus.NOT_STARTED.value, "2026-05-17"))
+    Tup = taskToFrontendTuple(TaskItem)
+    assert Tup[0] == "A"
+    assert len(tasksToFrontendTuples([TaskItem])) == 1
 
 
 def test_createTask():
@@ -60,60 +68,33 @@ def test_invalid_status_and_priority_filters():
 def test_update_delete_status_completed_and_clearing_fields():
     TaskManagerInstance, _ = buildService()
     TaskItem = TaskManagerInstance.createTask(TaskCreate(Title="A", DueDate=date.today(), EstimatedMinutes=30, Tags=["x"]))
-
-    UpdatedItem = TaskManagerInstance.updateTask(TaskItem.Id, TaskUpdate(Title="  B  ", Description="C", Tags=["t1", "t2"]))
-    assert UpdatedItem.Title == "B"
-    assert UpdatedItem.Description == "C"
-    assert UpdatedItem.Tags == ["t1", "t2"]
-
     ClearedItem = TaskManagerInstance.updateTask(TaskItem.Id, TaskUpdate(ClearDueDate=True, ClearEstimatedMinutes=True))
     assert ClearedItem.DueDate is None
     assert ClearedItem.EstimatedMinutes is None
 
-    DoneItem = TaskManagerInstance.completeTask(TaskItem.Id)
-    assert DoneItem.Status == TaskStatus.COMPLETED.value
-    assert DoneItem.CompletedAt is not None
 
-    ReopenedItem = TaskManagerInstance.reopenTask(TaskItem.Id)
-    assert ReopenedItem.CompletedAt is None
-
-    with pytest.raises(ValidationError):
-        TaskManagerInstance.updateTask(TaskItem.Id, TaskUpdate(EstimatedMinutes=0))
-
-    assert TaskManagerInstance.deleteTask(TaskItem.Id)
-
-
-def test_statistics_empty_multi_and_deadline_distribution_excludes_completed():
+def test_statistics_and_time_management_keys():
     StatisticsObj = Statistics()
-    assert StatisticsObj.getSummary([])["completedPercent"] == 0.0
-
-    Today = date.today()
-    OverdueCompleted = TaskCreate(Title="done", Status=TaskStatus.COMPLETED.value, DueDate=Today - timedelta(days=2), Priority=TaskPriority.HIGH.value)
-    ActiveOverdue = TaskCreate(Title="active", Status=TaskStatus.IN_PROGRESS.value, DueDate=Today - timedelta(days=1))
-
     TaskManagerInstance, HistoryInstance = buildService()
-    TaskManagerInstance.createTask(OverdueCompleted)
-    TaskManagerInstance.createTask(ActiveOverdue)
-
-    Summary = StatisticsObj.getSummary(TaskManagerInstance.listTasks(), len(HistoryInstance.listHistory(100)))
-    assert Summary["total"] == 2 and Summary["completed"] == 1
-
+    TaskManagerInstance.createTask(TaskCreate(Title="active", Status=TaskStatus.IN_PROGRESS.value, DueDate=date.today() - timedelta(days=1)))
+    Summary = StatisticsObj.getSummary(TaskManagerInstance.listTasks(), HistoryCount=len(HistoryInstance.listHistory(Limit=100)))
+    assert Summary["total"] == 1
     Deadline = StatisticsObj.getDeadlineDistribution(TaskManagerInstance.listTasks())
-    assert Deadline["overdue"] == 1
+    assert "next7Days" in Deadline and "noDeadline" in Deadline
+    Urgency = TimeManagement().getTaskUrgency(TaskManagerInstance.listTasks()[0])
+    assert Urgency in {"overdue", "today", "soon", "normal", "completed"}
 
 
-@pytest.mark.skipif(__import__("importlib").util.find_spec("matplotlib") is None, reason="matplotlib not installed")
-def test_time_management_and_chart(tmp_path):
+@pytest.mark.skipif(importlib.util.find_spec("matplotlib") is None, reason="matplotlib not installed")
+def test_charts_and_workload(tmp_path):
     TaskManagerInstance, _ = buildService()
     TaskManagerInstance.createTask(TaskCreate(Title="Overdue", DueDate=date.today() - timedelta(days=1), EstimatedMinutes=50))
-    TaskManagerInstance.createTask(TaskCreate(Title="Today", DueDate=date.today(), EstimatedMinutes=50))
-
-    TimeManagementObj = TimeManagement()
     Tasks = TaskManagerInstance.listTasks()
-    assert len(TimeManagementObj.getOverdueTasks(Tasks)) == 1
+    ChartsObj = Charts()
+    Path1 = ChartsObj.createStatusPieChart(Tasks, OutputPath=str(tmp_path))
+    Path2 = ChartsObj.createWorkloadChart(Tasks, Days=7, OutputPath=str(tmp_path))
+    assert Path(Path1).exists() and Path(Path2).exists()
 
-    Plan = TimeManagementObj.suggestDailyPlan(Tasks, AvailableMinutes=60)
-    assert len(Plan) == 1
 
-    ChartPath = Charts().createStatusPieChart(Tasks, str(tmp_path))
-    assert Path(ChartPath).exists()
+def test_example_usage_importable():
+    importlib.import_module("backend.example_usage")

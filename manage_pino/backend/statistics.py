@@ -66,6 +66,6 @@ class Statistics:
         return {
             "overdue": sum(t.DueDate is not None and t.DueDate < today for t in ActiveTasks),
             "today": sum(t.DueDate == today for t in ActiveTasks),
-            "next_7_days": sum(t.DueDate is not None and today < t.DueDate <= week for t in ActiveTasks),
-            "no_deadline": sum(t.DueDate is None for t in ActiveTasks),
+            "next7Days": sum(t.DueDate is not None and today < t.DueDate <= week for t in ActiveTasks),
+            "noDeadline": sum(t.DueDate is None for t in ActiveTasks),
         }

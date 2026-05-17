@@ -1,104 +1,60 @@
-"""
-Файл repositories.py.
-
-Здесь описан слой хранения данных и его контракты.
-
-Сейчас используется in-memory реализация. В будущем её можно заменить
-на SQLite/PostgreSQL без переписывания сервисной логики.
-"""
-
+"""Хранилища задач и истории."""
 from __future__ import annotations
-
 from typing import Protocol
-
 from .models import HistoryRecord, Task
 
 
 class TaskRepo(Protocol):
-    """
-    Контракт хранилища задач.
-
-    Сервисы работают через этот интерфейс и не зависят
-    от конкретной технологии хранения.
-    """
-
-    def create(self, task: Task) -> Task: ...
+    def create(self, TaskItem: Task) -> Task: ...
     def get(self, TaskId: int) -> Task | None: ...
     def list(self) -> list[Task]: ...
-    def update(self, TaskId: int, task: Task) -> Task: ...
+    def update(self, TaskId: int, TaskItem: Task) -> Task: ...
     def delete(self, TaskId: int) -> bool: ...
     def clear(self) -> None: ...
 
 
 class InMemoryTaskRepo:
-    """
-    Простейшее хранилище задач в памяти процесса.
-
-    Подходит для тестов и локального запуска без базы данных.
-    """
-
     def __init__(self) -> None:
-        self._tasks: dict[int, Task] = {}
+        self._Tasks: dict[int, Task] = {}
 
-    def create(self, task: Task) -> Task:
-        """Сохраняет задачу и возвращает её обратно."""
-        self._tasks[task.Id] = task
-        return task
+    def create(self, TaskItem: Task) -> Task:
+        self._Tasks[TaskItem.Id] = TaskItem
+        return TaskItem
 
     def get(self, TaskId: int) -> Task | None:
-        """Ищет задачу по id. Возвращает None, если задача не найдена."""
-        return self._tasks.get(TaskId)
+        return self._Tasks.get(TaskId)
 
     def list(self) -> list[Task]:
-        """Возвращает все задачи из памяти в виде списка."""
-        return list(self._tasks.values())
+        return list(self._Tasks.values())
 
-    def update(self, TaskId: int, task: Task) -> Task:
-        """Перезаписывает задачу по id и возвращает обновлённый объект."""
-        self._tasks[TaskId] = task
-        return task
+    def update(self, TaskId: int, TaskItem: Task) -> Task:
+        self._Tasks[TaskId] = TaskItem
+        return TaskItem
 
     def delete(self, TaskId: int) -> bool:
-        """Удаляет задачу по id. Возвращает True, если запись была."""
-        return self._tasks.pop(TaskId, None) is not None
+        return self._Tasks.pop(TaskId, None) is not None
 
     def clear(self) -> None:
-        """Полностью очищает in-memory хранилище задач."""
-        self._tasks.clear()
+        self._Tasks.clear()
 
 
 class HistoryRepo(Protocol):
-    """
-    Контракт хранилища истории действий.
-
-    Позволяет хранить журнал операций отдельно от задач.
-    """
-
-    def add(self, record: HistoryRecord) -> HistoryRecord: ...
-    def list(self, limit: int | None = None) -> list[HistoryRecord]: ...
+    def add(self, Record: HistoryRecord) -> HistoryRecord: ...
+    def list(self, Limit: int | None = None) -> list[HistoryRecord]: ...
     def clear(self) -> None: ...
 
 
 class InMemoryHistoryRepo:
-    """
-    In-memory хранилище истории действий.
-
-    Записи хранятся в обычном списке в порядке добавления.
-    """
-
     def __init__(self) -> None:
-        self._records: list[HistoryRecord] = []
+        self._Records: list[HistoryRecord] = []
 
-    def add(self, record: HistoryRecord) -> HistoryRecord:
-        """Добавляет запись в журнал и возвращает её."""
-        self._records.append(record)
-        return record
+    def add(self, Record: HistoryRecord) -> HistoryRecord:
+        self._Records.append(Record)
+        return Record
 
-    def list(self, limit: int | None = None) -> list[HistoryRecord]:
-        """Возвращает историю в обратном порядке, при необходимости с limit."""
-        records = list(reversed(self._records))
-        return records if limit is None else records[:limit]
+    def list(self, Limit: int | None = None) -> list[HistoryRecord]:
+        Records = list(reversed(self._Records))
+        return Records if Limit is None else Records[:Limit]
 
     def clear(self) -> None:
-        """Удаляет все записи из истории."""
-        self._records.clear()
+        self._Records.clear()

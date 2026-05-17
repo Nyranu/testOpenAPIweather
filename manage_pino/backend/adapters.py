@@ -3,7 +3,7 @@
 
 Здесь находятся функции-переходники между backend-моделью Task
 и текущим форматом фронтенда на кортежах
-(title, Description, Status, DueDate).
+(Title, Description, Status, DueDate).
 """
 
 from __future__ import annotations
@@ -14,58 +14,58 @@ from typing import Any
 from .models import Task, TaskPriority, TaskStatus
 
 
-def _parseDate(value: Any) -> date | None:
+def _parseDate(Value: Any) -> date | None:
     """Преобразует входное значение в date или None."""
-    if value in (None, ""):
+    if Value in (None, ""):
         return None
-    if isinstance(value, datetime):
-        return value.date()
-    if isinstance(value, date):
-        return value
-    if hasattr(value, "toString"):
-        value = value.toString("yyyy-MM-dd")
-    if isinstance(value, str):
-        for fmt in ("%Y-%m-%d", "%d.%m.%Y"):
+    if isinstance(Value, datetime):
+        return Value.date()
+    if isinstance(Value, date):
+        return Value
+    if hasattr(Value, "toString"):
+        Value = Value.toString("yyyy-MM-dd")
+    if isinstance(Value, str):
+        for Format in ("%Y-%m-%d", "%d.%m.%Y"):
             try:
-                return datetime.strptime(value, fmt).date()
+                return datetime.strptime(Value, Format).date()
             except ValueError:
                 pass
     return None
 
 
-def taskToFrontendTuple(task: Task) -> tuple[str, str, str, str]:
+def taskToFrontendTuple(TaskItem: Task) -> tuple[str, str, str, str]:
     """Преобразует backend-задачу в формат кортежа фронтенда."""
-    due = task.DueDate.isoformat() if task.DueDate else ""
-    return (task.Title, task.Description, task.Status, due)
+    Due = TaskItem.DueDate.isoformat() if TaskItem.DueDate else ""
+    return (TaskItem.Title, TaskItem.Description, TaskItem.Status, Due)
 
 
-def frontendTupleToTask(data: tuple) -> Task:
+def frontendTupleToTask(Data: tuple) -> Task:
     """Создаёт временный объект Task из кортежа фронтенда."""
-    Title, Description, Status, due = data
-    now = datetime.now(UTC)
+    Title, Description, Status, Due = Data
+    Now = datetime.now(UTC)
     return Task(
-        id=0,
-        Title=title,
-        Description=description,
-        Status=status or TaskStatus.NOT_STARTED.value,
-        DueDate=_parseDate(due),
-        CreatedAt=now,
-        UpdatedAt=now,
+        Id=0,
+        Title=Title,
+        Description=Description,
+        Status=Status or TaskStatus.NOT_STARTED.value,
+        DueDate=_parseDate(Due),
+        CreatedAt=Now,
+        UpdatedAt=Now,
         Priority=TaskPriority.MEDIUM.value,
     )
 
 
-def tasksToFrontendTuples(tasks: list[Task]) -> list[tuple[str, str, str, str]]:
+def tasksToFrontendTuples(Tasks: list[Task]) -> list[tuple[str, str, str, str]]:
     """Преобразует список backend-задач в кортежи фронтенда."""
-    return [taskToFrontendTuple(task) for task in tasks]
+    return [taskToFrontendTuple(TaskItem) for TaskItem in Tasks]
 
 
-def formatTaskForDisplay(task: Task) -> str:
+def formatTaskForDisplay(TaskItem: Task) -> str:
     """Форматирует задачу в короткую строку для отображения в списке."""
-    icon = {
+    Icon = {
         TaskStatus.COMPLETED.value: "🟢",
         TaskStatus.IN_PROGRESS.value: "🟡",
         TaskStatus.NOT_STARTED.value: "🔴",
-    }.get(task.Status, "⚪")
-    due = task.DueDate.strftime("%d.%m.%Y") if task.DueDate else "без срока"
-    return f"{icon} {task.Title} - {task.Status} (до: {due})"
+    }.get(TaskItem.Status, "⚪")
+    Due = TaskItem.DueDate.strftime("%d.%m.%Y") if TaskItem.DueDate else "без срока"
+    return f"{Icon} {TaskItem.Title} - {TaskItem.Status} (до: {Due})"

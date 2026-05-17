@@ -30,7 +30,7 @@ class History:
         return self.Repo.add(Record)
 
     def listHistory(self, Limit: int = 50) -> list[HistoryRecord]:
-        return self.Repo.list(limit=Limit)
+        return self.Repo.list(Limit=Limit)
 
     def clearHistory(self) -> None:
         self.Repo.clear()
