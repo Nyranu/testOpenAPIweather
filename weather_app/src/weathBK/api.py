@@ -9,6 +9,15 @@ from .models import DailyForecast, Location
 GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 
+REQUIRED_DAILY_FIELDS = (
+    "time",
+    "weather_code",
+    "temperature_2m_min",
+    "temperature_2m_max",
+    "precipitation_probability_max",
+    "wind_speed_10m_max",
+)
+
 
 class WeatherApiError(RuntimeError):
     """Ошибка взаимодействия с погодным API."""
@@ -18,9 +27,22 @@ def _request_json(url: str, params: dict[str, Any]) -> dict[str, Any]:
     try:
         response = requests.get(url, params=params, timeout=10)
         response.raise_for_status()
-        return response.json()
     except requests.RequestException as exc:
         raise WeatherApiError(f"Не удалось получить данные от API: {exc}") from exc
+
+    try:
+        data = response.json()
+    except ValueError as exc:
+        raise WeatherApiError("API вернуло некорректный JSON.") from exc
+
+    if isinstance(data, dict) and data.get("error") is True:
+        reason = data.get("reason") or data.get("message") or "Неизвестная ошибка API"
+        raise WeatherApiError(f"Ошибка API: {reason}")
+
+    if not isinstance(data, dict):
+        raise WeatherApiError("API вернуло неожиданный формат ответа.")
+
+    return data
 
 
 def geocode_address(address: str) -> Location:
@@ -55,8 +77,8 @@ def get_daily_forecast(latitude: float, longitude: float, days: int = 7) -> list
             "latitude": latitude,
             "longitude": longitude,
             "daily": (
-                "weathercode,temperature_2m_max,temperature_2m_min,"
-                "precipitation_probability_max,windspeed_10m_max"
+                "weather_code,temperature_2m_max,temperature_2m_min,"
+                "precipitation_probability_max,wind_speed_10m_max"
             ),
             "forecast_days": days,
             "timezone": "auto",
@@ -64,16 +86,20 @@ def get_daily_forecast(latitude: float, longitude: float, days: int = 7) -> list
     )
 
     daily = data.get("daily")
-    if not daily:
-        raise WeatherApiError("API не вернуло ежедневный прогноз.")
+    if not isinstance(daily, dict):
+        raise WeatherApiError("API не вернуло блок daily в ожидаемом формате.")
+
+    missing = [field for field in REQUIRED_DAILY_FIELDS if field not in daily]
+    if missing:
+        raise WeatherApiError(f"В ответе API отсутствуют обязательные поля daily: {', '.join(missing)}")
 
     records = zip(
         daily["time"],
-        daily["weathercode"],
+        daily["weather_code"],
         daily["temperature_2m_min"],
         daily["temperature_2m_max"],
         daily["precipitation_probability_max"],
-        daily["windspeed_10m_max"],
+        daily["wind_speed_10m_max"],
     )
 
     return [
