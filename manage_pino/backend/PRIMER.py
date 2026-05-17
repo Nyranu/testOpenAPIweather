@@ -1,12 +1,13 @@
 """
-Пример ручного использования backend-ядра без PyQt6-фронтенда.
+Пример ручного использования бекенда на его основе можешь уже втыкать приколы, просто для наглядности
+И да графы тут создадут папку в бакенде
 """
 from datetime import date, timedelta
-from chartsTask import Charts
-from statisticsTask import Statistics
-from models import TaskCreate, TaskPriority, TaskStatus
-from repomemory import InMemoryHistoryRepo, InMemoryTaskRepo
-from services import History, TaskManager
+from .charts import Charts
+from .statisticsTask import Statistics
+from .models import TaskCreate, TaskPriority, TaskStatus
+from .repomemory import InMemoryHistoryRepo, InMemoryTaskRepo
+from .services import History, TaskManager
 
 
 

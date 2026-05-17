@@ -3,7 +3,7 @@
 from backend import TaskManager, TaskCreate
 """
 
-from .chartsTask import Charts
+from .charts import Charts
 from .services import History, TaskManager
 from .statisticsTask import Statistics
 from .timeManagement import TimeManagement
