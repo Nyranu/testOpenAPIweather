@@ -113,7 +113,7 @@ class Game:
                 pygame.Rect(500, 220, 20, 160),
                 pygame.Rect(320, 400, 180, 20),
                 pygame.Rect(180, 320, 20, 140),
-                pygame.Rect(590, 360, 120, 20),
+                pygame.Rect(580, 360, 120, 20),
             ]),
         }
 
