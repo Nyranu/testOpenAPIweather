@@ -1,3 +1,4 @@
+import os
 import textwrap
 from datetime import datetime
 from pathlib import Path
@@ -7,6 +8,8 @@ from tkinter import filedialog, messagebox
 import fitz
 from PIL import Image, ImageTk
 from reportlab.lib.pagesizes import A4
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 
 
@@ -33,6 +36,8 @@ class ProjectToPdfApp:
         self.output_dir = Path(__file__).resolve().parent / "output"
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
+        self.pdf_regular_font, self.pdf_bold_font, self.pdf_mono_font = self.register_pdf_fonts()
+
         self.pdf_path: Path | None = None
         self.pdf_doc: fitz.Document | None = None
         self.current_page = 0
@@ -40,6 +45,42 @@ class ProjectToPdfApp:
         self.tk_preview_image = None
 
         self._build_ui()
+
+    def register_pdf_fonts(self) -> tuple[str, str, str]:
+        regular_candidates = [
+            "C:/Windows/Fonts/arial.ttf",
+            "C:/Windows/Fonts/calibri.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/System/Library/Fonts/Supplemental/Arial.ttf",
+        ]
+        bold_candidates = [
+            "C:/Windows/Fonts/arialbd.ttf",
+            "C:/Windows/Fonts/calibrib.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+            "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+        ]
+        mono_candidates = [
+            "C:/Windows/Fonts/consola.ttf",
+            "C:/Windows/Fonts/cour.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
+            "/System/Library/Fonts/Supplemental/Courier New.ttf",
+        ]
+
+        regular_font = self._register_font_from_candidates("AppRegular", regular_candidates, fallback="Helvetica")
+        bold_font = self._register_font_from_candidates("AppBold", bold_candidates, fallback="Helvetica-Bold")
+        mono_font = self._register_font_from_candidates("AppMono", mono_candidates, fallback="Courier")
+
+        return regular_font, bold_font, mono_font
+
+    def _register_font_from_candidates(self, font_name: str, candidates: list[str], fallback: str) -> str:
+        for font_path in candidates:
+            if Path(font_path).exists():
+                try:
+                    pdfmetrics.registerFont(TTFont(font_name, font_path))
+                    return font_name
+                except Exception:
+                    continue
+        return fallback
 
     def _build_ui(self):
         top_frame = tk.Frame(self.root, padx=10, pady=10)
@@ -117,28 +158,37 @@ class ProjectToPdfApp:
     def collect_project_files(self, root_folder: Path) -> list[Path]:
         collected: list[Path] = []
 
-        for path in root_folder.rglob("*"):
-            if not path.is_file():
-                continue
+        for current_root, dirs, files in os.walk(root_folder):
+            dirs[:] = [directory for directory in dirs if directory not in self.IGNORED_DIRS]
+            current_path = Path(current_root)
 
-            if any(part in self.IGNORED_DIRS for part in path.parts):
-                continue
+            for file_name in files:
+                path = current_path / file_name
 
-            if path.suffix.lower() not in self.ALLOWED_EXTENSIONS:
-                continue
-
-            try:
-                if path.stat().st_size > self.MAX_FILE_SIZE:
+                if path.suffix.lower() not in self.ALLOWED_EXTENSIONS:
                     continue
-            except OSError:
-                continue
 
-            collected.append(path)
+                try:
+                    if path.stat().st_size > self.MAX_FILE_SIZE:
+                        continue
+                except OSError:
+                    continue
+
+                collected.append(path)
 
         return sorted(collected)
 
+    def read_text_file(self, path: Path) -> str:
+        for encoding in ("utf-8", "utf-8-sig", "cp1251"):
+            try:
+                return path.read_text(encoding=encoding)
+            except UnicodeDecodeError:
+                continue
+
+        return path.read_text(encoding="utf-8", errors="replace")
+
     def generate_pdf(self, project_root: Path, files: list[Path], output_pdf: Path):
-        page_width, page_height = A4
+        _, page_height = A4
         margin = 40
         line_height = 12
         max_chars_per_line = 100
@@ -146,28 +196,28 @@ class ProjectToPdfApp:
         pdf = canvas.Canvas(str(output_pdf), pagesize=A4)
 
         y = page_height - margin
-        pdf.setFont("Helvetica-Bold", 16)
+        pdf.setFont(self.pdf_bold_font, 16)
         pdf.drawString(margin, y, "Отчёт по проекту")
 
         y -= 25
-        pdf.setFont("Helvetica", 10)
+        pdf.setFont(self.pdf_regular_font, 10)
         pdf.drawString(margin, y, f"Путь: {project_root}")
         y -= 15
         pdf.drawString(margin, y, f"Создан: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
         y -= 25
-        pdf.setFont("Helvetica-Bold", 12)
+        pdf.setFont(self.pdf_bold_font, 12)
         pdf.drawString(margin, y, "Список файлов:")
         y -= 18
 
-        pdf.setFont("Helvetica", 9)
+        pdf.setFont(self.pdf_regular_font, 9)
         for file_path in files:
             relative_path = file_path.relative_to(project_root).as_posix()
             for line in textwrap.wrap(relative_path, width=110):
                 if y <= margin:
                     pdf.showPage()
                     y = page_height - margin
-                    pdf.setFont("Helvetica", 9)
+                    pdf.setFont(self.pdf_regular_font, 9)
                 pdf.drawString(margin + 10, y, f"- {line}")
                 y -= line_height
 
@@ -176,30 +226,24 @@ class ProjectToPdfApp:
             y = page_height - margin
 
             rel_path = file_path.relative_to(project_root).as_posix()
-            pdf.setFont("Helvetica-Bold", 12)
+            pdf.setFont(self.pdf_bold_font, 12)
             pdf.drawString(margin, y, rel_path)
             y -= 18
 
-            pdf.setFont("Courier", 8)
             try:
-                content = file_path.read_text(encoding="utf-8")
-            except UnicodeDecodeError:
-                try:
-                    content = file_path.read_text(encoding="utf-8", errors="ignore")
-                except Exception:
-                    messagebox.showwarning("Предупреждение", f"Не удалось прочитать файл:\n{file_path}")
-                    continue
+                content = self.read_text_file(file_path)
             except Exception:
                 messagebox.showwarning("Предупреждение", f"Не удалось прочитать файл:\n{file_path}")
                 continue
 
+            pdf.setFont(self.pdf_mono_font, 8)
             for original_line in content.splitlines() or [""]:
                 wrapped_lines = textwrap.wrap(original_line, width=max_chars_per_line) or [""]
                 for wrapped in wrapped_lines:
                     if y <= margin:
                         pdf.showPage()
                         y = page_height - margin
-                        pdf.setFont("Courier", 8)
+                        pdf.setFont(self.pdf_mono_font, 8)
                     pdf.drawString(margin, y, wrapped)
                     y -= line_height
 

@@ -8,15 +8,15 @@
 - сохранить PDF в `output/`;
 - просматривать PDF прямо в окне приложения и листать страницы.
 
-## Установка зависимостей
+## Требования
+
+- Python 3.10+
+
+## Установка и запуск
 
 ```bash
+cd project_to_pdf_tkinter
 pip install -r requirements.txt
-```
-
-## Запуск
-
-```bash
 python main.py
 ```
 
