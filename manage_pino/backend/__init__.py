@@ -9,7 +9,7 @@
 Здесь не должно быть бизнес-логики — только реэкспорт.
 """
 
-# Явные импорты для основных сервисов.
+# Явные импорты для основных классов backend-ядра.
 from .charts import Charts
 from .services import History, TaskManager
 from .statistics import Statistics

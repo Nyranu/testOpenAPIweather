@@ -1,4 +1,15 @@
-"""Хранилища задач и истории."""
+"""
+Файл repositories.py.
+
+Здесь описан слой хранилищ backend-ядра.
+
+TaskRepo — это контракт (интерфейс) для работы с задачами.
+InMemoryTaskRepo — простая реализация, где данные живут только в памяти процесса.
+
+Такой подход позволяет позже заменить in-memory хранилища на БД
+(SQLite/PostgreSQL и т.д.) без изменения бизнес-логики в TaskManager.
+"""
+
 from __future__ import annotations
 from typing import Protocol
 from .models import HistoryRecord, Task

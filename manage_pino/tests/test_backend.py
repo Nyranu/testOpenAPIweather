@@ -68,9 +68,21 @@ def test_invalid_status_and_priority_filters():
 def test_update_delete_status_completed_and_clearing_fields():
     TaskManagerInstance, _ = buildService()
     TaskItem = TaskManagerInstance.createTask(TaskCreate(Title="A", DueDate=date.today(), EstimatedMinutes=30, Tags=["x"]))
+
+    DoneItem = TaskManagerInstance.completeTask(TaskItem.Id)
+    assert DoneItem.CompletedAt is not None
+
+    ReopenedItem = TaskManagerInstance.reopenTask(TaskItem.Id)
+    assert ReopenedItem.CompletedAt is None
+
+    with pytest.raises(ValidationError):
+        TaskManagerInstance.updateTask(TaskItem.Id, TaskUpdate(EstimatedMinutes=0))
+
     ClearedItem = TaskManagerInstance.updateTask(TaskItem.Id, TaskUpdate(ClearDueDate=True, ClearEstimatedMinutes=True))
     assert ClearedItem.DueDate is None
     assert ClearedItem.EstimatedMinutes is None
+
+    assert TaskManagerInstance.deleteTask(TaskItem.Id) is True
 
 
 def test_statistics_and_time_management_keys():
