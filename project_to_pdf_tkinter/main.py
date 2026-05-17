@@ -44,11 +44,6 @@ class ProjectToPdfApp:
         self.total_pages = 0
         self.tk_preview_image = None
 
-        self.zoom_level = 1.5
-        self.min_zoom = 0.5
-        self.max_zoom = 4.0
-        self.zoom_step = 0.25
-
         self._build_ui()
 
     def register_pdf_fonts(self) -> tuple[str, str, str]:
@@ -107,32 +102,14 @@ class ProjectToPdfApp:
         self.preview_frame = tk.Frame(self.root, bd=1, relief=tk.SOLID, bg="#f7f7f7")
         self.preview_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
 
-        self.preview_canvas = tk.Canvas(self.preview_frame, bg="#f7f7f7", highlightthickness=0)
-        self.preview_canvas.grid(row=0, column=0, sticky="nsew")
-
-        self.preview_v_scrollbar = tk.Scrollbar(self.preview_frame, orient=tk.VERTICAL, command=self.preview_canvas.yview)
-        self.preview_v_scrollbar.grid(row=0, column=1, sticky="ns")
-
-        self.preview_h_scrollbar = tk.Scrollbar(self.preview_frame, orient=tk.HORIZONTAL, command=self.preview_canvas.xview)
-        self.preview_h_scrollbar.grid(row=1, column=0, sticky="ew")
-
-        self.preview_canvas.configure(
-            yscrollcommand=self.preview_v_scrollbar.set,
-            xscrollcommand=self.preview_h_scrollbar.set,
-        )
-
-        self.preview_frame.grid_rowconfigure(0, weight=1)
-        self.preview_frame.grid_columnconfigure(0, weight=1)
-
-        self.preview_canvas.create_text(
-            20,
-            20,
-            anchor=tk.NW,
+        self.preview_label = tk.Label(
+            self.preview_frame,
             text="PDF пока не создан",
-            fill="#666",
+            bg="#f7f7f7",
+            fg="#666",
             font=("Arial", 14),
-            tags="placeholder",
         )
+        self.preview_label.pack(fill=tk.BOTH, expand=True)
 
         bottom_frame = tk.Frame(self.root, padx=10, pady=10)
         bottom_frame.pack(fill=tk.X)
@@ -145,18 +122,6 @@ class ProjectToPdfApp:
 
         next_btn = tk.Button(bottom_frame, text="Следующая страница", command=self.next_page)
         next_btn.pack(side=tk.LEFT)
-
-        zoom_out_btn = tk.Button(bottom_frame, text="Уменьшить", command=self.zoom_out)
-        zoom_out_btn.pack(side=tk.LEFT, padx=(20, 5))
-
-        zoom_in_btn = tk.Button(bottom_frame, text="Увеличить", command=self.zoom_in)
-        zoom_in_btn.pack(side=tk.LEFT)
-
-        reset_zoom_btn = tk.Button(bottom_frame, text="Сбросить масштаб", command=self.reset_zoom)
-        reset_zoom_btn.pack(side=tk.LEFT, padx=(5, 10))
-
-        self.zoom_label = tk.Label(bottom_frame, text="Масштаб: 150%")
-        self.zoom_label.pack(side=tk.LEFT)
 
         self.page_label = tk.Label(bottom_frame, text="Страница 0 / 0", padx=15)
         self.page_label.pack(side=tk.LEFT)
@@ -308,34 +273,6 @@ class ProjectToPdfApp:
             messagebox.showwarning("Пустой PDF", "Созданный PDF не содержит страниц.")
             return
 
-        self.preview_canvas.xview_moveto(0)
-        self.preview_canvas.yview_moveto(0)
-        self.render_current_page()
-
-    def update_zoom_label(self):
-        self.zoom_label.config(text=f"Масштаб: {int(self.zoom_level * 100)}%")
-
-    def zoom_in(self):
-        if self.pdf_doc is None:
-            return
-        if self.zoom_level < self.max_zoom:
-            self.zoom_level = min(self.max_zoom, self.zoom_level + self.zoom_step)
-            self.update_zoom_label()
-            self.render_current_page()
-
-    def zoom_out(self):
-        if self.pdf_doc is None:
-            return
-        if self.zoom_level > self.min_zoom:
-            self.zoom_level = max(self.min_zoom, self.zoom_level - self.zoom_step)
-            self.update_zoom_label()
-            self.render_current_page()
-
-    def reset_zoom(self):
-        if self.pdf_doc is None:
-            return
-        self.zoom_level = 1.5
-        self.update_zoom_label()
         self.render_current_page()
 
     def render_current_page(self):
@@ -344,17 +281,20 @@ class ProjectToPdfApp:
 
         try:
             page = self.pdf_doc.load_page(self.current_page)
-            matrix = fitz.Matrix(self.zoom_level, self.zoom_level)
+            zoom = 1.5
+            matrix = fitz.Matrix(zoom, zoom)
             pix = page.get_pixmap(matrix=matrix)
+
             image = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
 
-            self.tk_preview_image = ImageTk.PhotoImage(image)
-            self.preview_canvas.delete("all")
-            self.preview_canvas.create_image(0, 0, anchor=tk.NW, image=self.tk_preview_image)
-            self.preview_canvas.config(scrollregion=self.preview_canvas.bbox(tk.ALL))
+            self.root.update_idletasks()
+            max_w = max(self.preview_frame.winfo_width() - 20, 100)
+            max_h = max(self.preview_frame.winfo_height() - 20, 100)
+            image.thumbnail((max_w, max_h), Image.Resampling.LANCZOS)
 
+            self.tk_preview_image = ImageTk.PhotoImage(image)
+            self.preview_label.config(image=self.tk_preview_image, text="")
             self.page_label.config(text=f"Страница {self.current_page + 1} / {self.total_pages}")
-            self.update_zoom_label()
         except Exception as error:
             messagebox.showerror("Ошибка отображения", f"Не удалось отрисовать страницу PDF:\n{error}")
 
@@ -363,8 +303,6 @@ class ProjectToPdfApp:
             return
         if self.current_page < self.total_pages - 1:
             self.current_page += 1
-            self.preview_canvas.xview_moveto(0)
-            self.preview_canvas.yview_moveto(0)
             self.render_current_page()
 
     def previous_page(self):
@@ -372,8 +310,6 @@ class ProjectToPdfApp:
             return
         if self.current_page > 0:
             self.current_page -= 1
-            self.preview_canvas.xview_moveto(0)
-            self.preview_canvas.yview_moveto(0)
             self.render_current_page()
 
 
