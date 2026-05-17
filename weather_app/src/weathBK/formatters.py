@@ -36,8 +36,6 @@ def formatLocation(location: Location) -> str:
 
 
 def formatForecast(location: Location, forecast: list[DailyForecast]) -> str:
-    """Итоговый отчёт."""
-
     lines = [f"Прогноз для: {formatLocation(location)}", "-" * 72]
     for day in forecast:
         lines.extend(
