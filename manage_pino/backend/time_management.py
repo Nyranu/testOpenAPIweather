@@ -1,3 +1,10 @@
+"""
+Файл time_management.py.
+
+Содержит функции для планирования задач по времени:
+просрочка, задачи на сегодня, ближайшие дедлайны и дневной план.
+"""
+
 from __future__ import annotations
 
 from datetime import date, timedelta

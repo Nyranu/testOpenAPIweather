@@ -1,3 +1,14 @@
+"""
+Пример ручного использования backend-ядра без PyQt6-фронтенда.
+
+Запускать из папки manage_pino:
+
+    python -m backend.example_usage
+
+Файл показывает создание сервисов, операции с задачами, историю,
+статистику и генерацию графика.
+"""
+
 from datetime import date, timedelta
 
 from backend.charts import ChartService

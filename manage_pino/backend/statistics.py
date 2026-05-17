@@ -1,3 +1,10 @@
+"""
+Файл statistics.py.
+
+Содержит расчёты статистики по задачам:
+сводка, распределения, процент завершения и дедлайн-метрики.
+"""
+
 from __future__ import annotations
 
 from datetime import date, timedelta

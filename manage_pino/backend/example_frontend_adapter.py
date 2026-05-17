@@ -1,3 +1,11 @@
+"""
+Пример того, как фронтенд может получать данные из backend-ядра.
+
+Это не подключение к PyQt6, а демонстрация идеи:
+backend хранит объекты Task, а фронтенд может получать кортежи
+через функции adapters.py.
+"""
+
 from backend.adapters import tasks_to_frontend_tuples
 from backend.models import TaskCreate
 from backend.repositories import InMemoryHistoryRepository, InMemoryTaskRepository

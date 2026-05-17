@@ -1,3 +1,10 @@
+"""
+Файл charts.py.
+
+Здесь находится сервис построения графиков по задачам через matplotlib.
+Сервис не запускает GUI и сохраняет графики в PNG-файлы.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path

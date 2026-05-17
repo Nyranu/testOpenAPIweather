@@ -1,18 +1,28 @@
+"""
+Файл exceptions.py.
+
+Здесь собраны пользовательские исключения backend-ядра задач.
+
+Используйте эти ошибки в сервисах вместо общих Exception,
+чтобы фронтенд и тесты могли точно понимать тип проблемы.
+"""
+
+
 class TaskError(Exception):
-    """Base error for task backend."""
+    """Базовая ошибка backend-ядра задач."""
 
 
 class TaskNotFoundError(TaskError):
-    pass
+    """Ошибка: задача с указанным id не найдена."""
 
 
 class ValidationError(TaskError):
-    pass
+    """Ошибка: переданы некорректные данные задачи."""
 
 
 class InvalidStatusError(ValidationError):
-    pass
+    """Ошибка: передан статус, которого нет в TaskStatus."""
 
 
 class InvalidPriorityError(ValidationError):
-    pass
+    """Ошибка: передан приоритет, которого нет в TaskPriority."""

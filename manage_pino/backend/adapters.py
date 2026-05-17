@@ -1,3 +1,11 @@
+"""
+Файл adapters.py.
+
+Здесь находятся функции-переходники между backend-моделью Task
+и текущим форматом фронтенда на кортежах
+(title, description, status, due_date).
+"""
+
 from __future__ import annotations
 
 from datetime import UTC, date, datetime
