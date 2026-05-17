@@ -4,16 +4,16 @@
 Этот файл собирает основные классы backend-ядра в одном месте.
 Благодаря этому другие части проекта могут делать короткие импорты:
 
-    from backend import TaskService, TaskCreate
+    from backend import TaskManager, TaskCreate
 
 Здесь не должно быть бизнес-логики — только реэкспорт.
 """
 
 # Явные импорты для основных сервисов.
-from .charts import ChartService
-from .services import HistoryService, TaskService
-from .statistics import StatisticsService
-from .time_management import TimeManagementService
+from .charts import Charts
+from .services import History, TaskManager
+from .statistics import Statistics
+from .time_management import TimeManagement
 
 # Wildcard-реэкспорты оставлены для совместимости с ранним API пакета.
 from .adapters import *

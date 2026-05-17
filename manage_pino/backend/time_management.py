@@ -12,79 +12,79 @@ from datetime import date, timedelta
 from .models import Task, TaskPriority, TaskStatus
 
 
-class TimeManagementService:
+class TimeManagement:
     """Сервис для выборок и планирования задач по времени."""
 
-    def get_overdue_tasks(self, tasks: list[Task]) -> list[Task]:
+    def getOverdueTasks(self, tasks: list[Task]) -> list[Task]:
         """Возвращает незавершённые задачи с истёкшим дедлайном."""
         today = date.today()
-        return [t for t in tasks if t.due_date and t.due_date < today and t.status != TaskStatus.COMPLETED.value]
+        return [t for t in tasks if t.DueDate and t.DueDate < today and t.Status != TaskStatus.COMPLETED.value]
 
-    def get_today_tasks(self, tasks: list[Task]) -> list[Task]:
+    def getTodayTasks(self, tasks: list[Task]) -> list[Task]:
         """Возвращает незавершённые задачи на сегодня."""
         today = date.today()
-        return [t for t in tasks if t.due_date == today and t.status != TaskStatus.COMPLETED.value]
+        return [t for t in tasks if t.DueDate == today and t.Status != TaskStatus.COMPLETED.value]
 
-    def get_upcoming_tasks(self, tasks: list[Task], days: int = 7) -> list[Task]:
+    def getUpcomingTasks(self, tasks: list[Task], days: int = 7) -> list[Task]:
         """Возвращает незавершённые задачи на ближайшие N дней."""
         today, end = date.today(), date.today() + timedelta(days=days)
-        return [t for t in tasks if t.due_date and today < t.due_date <= end and t.status != TaskStatus.COMPLETED.value]
+        return [t for t in tasks if t.DueDate and today < t.DueDate <= end and t.Status != TaskStatus.COMPLETED.value]
 
-    def get_completed_tasks(self, tasks: list[Task]) -> list[Task]:
+    def getCompletedTasks(self, tasks: list[Task]) -> list[Task]:
         """Возвращает завершённые задачи."""
-        return [t for t in tasks if t.status == TaskStatus.COMPLETED.value]
+        return [t for t in tasks if t.Status == TaskStatus.COMPLETED.value]
 
-    def get_workload_by_day(self, tasks: list[Task], days: int = 7) -> dict[str, int]:
+    def getWorkloadByDay(self, tasks: list[Task], days: int = 7) -> dict[str, int]:
         """Возвращает суммарную нагрузку по дням в минутах."""
         today = date.today()
         result = {str(today + timedelta(days=i)): 0 for i in range(days)}
         for task in tasks:
-            if task.due_date and str(task.due_date) in result and task.status != TaskStatus.COMPLETED.value:
-                result[str(task.due_date)] += task.estimated_minutes or 30
+            if task.DueDate and str(task.DueDate) in result and task.Status != TaskStatus.COMPLETED.value:
+                result[str(task.DueDate)] += task.EstimatedMinutes or 30
         return result
 
-    def sort_by_deadline(self, tasks: list[Task]) -> list[Task]:
+    def sortByDeadline(self, tasks: list[Task]) -> list[Task]:
         """Сортирует задачи по дедлайну, задачи без срока — в конце."""
-        return sorted(tasks, key=lambda t: (t.due_date is None, t.due_date or date.max))
+        return sorted(tasks, key=lambda t: (t.DueDate is None, t.DueDate or date.max))
 
-    def sort_by_priority(self, tasks: list[Task]) -> list[Task]:
+    def sortByPriority(self, tasks: list[Task]) -> list[Task]:
         """Сортирует задачи по приоритету: высокий -> средний -> низкий."""
         order = {TaskPriority.HIGH.value: 0, TaskPriority.MEDIUM.value: 1, TaskPriority.LOW.value: 2}
-        return sorted(tasks, key=lambda t: order.get(t.priority, 99))
+        return sorted(tasks, key=lambda t: order.get(t.Priority, 99))
 
-    def get_task_urgency(self, task: Task) -> str:
+    def getTask_urgency(self, task: Task) -> str:
         """Определяет срочность задачи."""
-        if task.status == TaskStatus.COMPLETED.value:
+        if task.Status == TaskStatus.COMPLETED.value:
             return "completed"
-        if not task.due_date:
+        if not task.DueDate:
             return "normal"
         today = date.today()
-        if task.due_date < today:
+        if task.DueDate < today:
             return "overdue"
-        if task.due_date == today:
+        if task.DueDate == today:
             return "today"
-        if task.due_date <= today + timedelta(days=3):
+        if task.DueDate <= today + timedelta(days=3):
             return "soon"
         return "normal"
 
-    def suggest_daily_plan(self, tasks: list[Task], available_minutes: int = 240) -> list[Task]:
+    def suggestDailyPlan(self, tasks: list[Task], AvailableMinutes: int = 240) -> list[Task]:
         """Предлагает план на день по приоритетам и доступному времени."""
-        filtered = [t for t in tasks if t.status != TaskStatus.COMPLETED.value]
-        overdue = self.get_overdue_tasks(filtered)
-        today_tasks = [t for t in self.get_today_tasks(filtered) if t not in overdue]
+        filtered = [t for t in tasks if t.Status != TaskStatus.COMPLETED.value]
+        overdue = self.getOverdueTasks(filtered)
+        TodayTasks = [t for t in self.getTodayTasks(filtered) if t not in overdue]
         high = [
             t
-            for t in self.sort_by_priority(filtered)
-            if t.priority == TaskPriority.HIGH.value and t not in overdue and t not in today_tasks
+            for t in self.sortByPriority(filtered)
+            if t.Priority == TaskPriority.HIGH.value and t not in overdue and t not in TodayTasks
         ]
-        rest = [t for t in self.sort_by_deadline(filtered) if t not in overdue and t not in today_tasks and t not in high]
-        ordered = overdue + today_tasks + high + rest
+        rest = [t for t in self.sortByDeadline(filtered) if t not in overdue and t not in TodayTasks and t not in high]
+        ordered = overdue + TodayTasks + high + rest
 
         plan: list[Task] = []
         used = 0
         for task in ordered:
-            cost = task.estimated_minutes or 30
-            if used + cost <= available_minutes:
+            cost = task.EstimatedMinutes or 30
+            if used + cost <= AvailableMinutes:
                 plan.append(task)
                 used += cost
         return plan

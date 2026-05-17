@@ -4,7 +4,7 @@
 Здесь находится основная бизнес-логика менеджера задач:
 создание, обновление, удаление, фильтрация и история действий.
 
-Фронтенд должен вызывать эти сервисы, а не работать с репозиториями напрямую.
+Фронтенд должен вызывать эти классы, а не работать с хранилищами напрямую.
 """
 
 from __future__ import annotations
@@ -14,174 +14,149 @@ from datetime import UTC, date, datetime
 
 from .exceptions import InvalidPriorityError, InvalidStatusError, TaskNotFoundError, ValidationError
 from .models import HistoryRecord, Task, TaskCreate, TaskPriority, TaskStatus, TaskUpdate
-from .repositories import HistoryRepository, TaskRepository
+from .repositories import HistoryRepo, TaskRepo
 
 
-class HistoryService:
-    """Сервис работы с историей действий."""
+class History:
+    """Класс для добавления, чтения и очистки истории действий."""
 
-    def __init__(self, repository: HistoryRepository) -> None:
-        self.repository = repository
-        self._next_id = 1
+    def __init__(self, Repo: HistoryRepo) -> None:
+        self.Repo = Repo
+        self._nextId = 1
 
-    def add_history(
-        self,
-        action: str,
-        task_id: int | None = None,
-        task_title: str | None = None,
-        details: str | None = None,
-    ) -> HistoryRecord:
-        """Добавляет запись в историю."""
-        rec = HistoryRecord(self._next_id, datetime.now(UTC), action, task_id, task_title, details)
-        self._next_id += 1
-        return self.repository.add(rec)
+    def addHistory(self, Action: str, TaskId: int | None = None, TaskTitle: str | None = None, Details: str | None = None) -> HistoryRecord:
+        Record = HistoryRecord(self._nextId, datetime.now(UTC), Action, TaskId, TaskTitle, Details)
+        self._nextId += 1
+        return self.Repo.add(Record)
 
-    def list_history(self, limit: int = 50) -> list[HistoryRecord]:
-        """Возвращает последние записи истории."""
-        return self.repository.list(limit=limit)
+    def listHistory(self, Limit: int = 50) -> list[HistoryRecord]:
+        return self.Repo.list(limit=Limit)
 
-    def clear_history(self) -> None:
-        """Очищает историю действий."""
-        self.repository.clear()
+    def clearHistory(self) -> None:
+        self.Repo.clear()
 
 
-class TaskService:
-    """Сервис бизнес-логики для задач."""
+class TaskManager:
+    """Главный класс управления задачами и проверками данных."""
 
-    def __init__(self, task_repository: TaskRepository, history_service: HistoryService) -> None:
-        self.task_repository = task_repository
-        self.history_service = history_service
-        self._next_id = 1
+    def __init__(self, TaskRepoObj: TaskRepo, HistoryObj: History) -> None:
+        self.TaskRepoObj = TaskRepoObj
+        self.HistoryObj = HistoryObj
+        self._nextId = 1
 
-    def _validate_status(self, status: str) -> None:
-        if status not in [s.value for s in TaskStatus]:
-            raise InvalidStatusError(status)
+    def _validateStatus(self, Status: str) -> None:
+        if Status not in [s.value for s in TaskStatus]:
+            raise InvalidStatusError(Status)
 
-    def _validate_priority(self, priority: str) -> None:
-        if priority not in [p.value for p in TaskPriority]:
-            raise InvalidPriorityError(priority)
+    def _validatePriority(self, Priority: str) -> None:
+        if Priority not in [p.value for p in TaskPriority]:
+            raise InvalidPriorityError(Priority)
 
-    def _validate_estimated_minutes(self, estimated_minutes: int | None) -> None:
-        if estimated_minutes is not None and estimated_minutes <= 0:
-            raise ValidationError("estimated_minutes must be greater than 0")
+    def _validateEstimatedMinutes(self, EstimatedMinutes: int | None) -> None:
+        if EstimatedMinutes is not None and EstimatedMinutes <= 0:
+            raise ValidationError("EstimatedMinutes must be greater than 0")
 
-    def create_task(self, data: TaskCreate) -> Task:
-        """Создаёт задачу, валидирует данные и пишет историю."""
-        if not data.title or not data.title.strip():
-            raise ValidationError("Task title cannot be empty")
-        status = data.status or TaskStatus.NOT_STARTED.value
-        priority = data.priority or TaskPriority.MEDIUM.value
-        self._validate_status(status)
-        self._validate_priority(priority)
-        self._validate_estimated_minutes(data.estimated_minutes)
+    def createTask(self, Data: TaskCreate) -> Task:
+        if not Data.Title or not Data.Title.strip():
+            raise ValidationError("Task Title cannot be empty")
+        Status = Data.Status or TaskStatus.NOT_STARTED.value
+        Priority = Data.Priority or TaskPriority.MEDIUM.value
+        self._validateStatus(Status)
+        self._validatePriority(Priority)
+        self._validateEstimatedMinutes(Data.EstimatedMinutes)
 
-        now = datetime.now(UTC)
-        completed_at = now if status == TaskStatus.COMPLETED.value else None
-        task = Task(
-            id=self._next_id,
-            title=data.title.strip(),
-            description=data.description,
-            status=status,
-            due_date=data.due_date,
-            created_at=now,
-            updated_at=now,
-            completed_at=completed_at,
-            priority=priority,
-            estimated_minutes=data.estimated_minutes,
-            tags=list(data.tags),
+        Now = datetime.now(UTC)
+        CompletedAt = Now if Status == TaskStatus.COMPLETED.value else None
+        TaskItem = Task(
+            Id=self._nextId,
+            Title=Data.Title.strip(),
+            Description=Data.Description,
+            Status=Status,
+            DueDate=Data.DueDate,
+            CreatedAt=Now,
+            UpdatedAt=Now,
+            CompletedAt=CompletedAt,
+            Priority=Priority,
+            EstimatedMinutes=Data.EstimatedMinutes,
+            Tags=list(Data.Tags),
         )
-        self._next_id += 1
-        self.task_repository.create(task)
-        self.history_service.add_history("create_task", task.id, task.title, f"Создана задача со статусом {task.status}")
-        return task
+        self._nextId += 1
+        self.TaskRepoObj.create(TaskItem)
+        self.HistoryObj.addHistory("createTask", TaskItem.Id, TaskItem.Title, f"Создана задача со статусом {TaskItem.Status}")
+        return TaskItem
 
-    def get_task(self, task_id: int) -> Task:
-        """Возвращает задачу по id или выбрасывает TaskNotFoundError."""
-        task = self.task_repository.get(task_id)
-        if not task:
-            raise TaskNotFoundError(f"Task {task_id} not found")
-        return task
+    def getTask(self, TaskId: int) -> Task:
+        TaskItem = self.TaskRepoObj.get(TaskId)
+        if not TaskItem:
+            raise TaskNotFoundError(f"Task {TaskId} not found")
+        return TaskItem
 
-    def list_tasks(
-        self,
-        status: str | None = None,
-        priority: str | None = None,
-        overdue_only: bool = False,
-        search: str | None = None,
-    ) -> list[Task]:
-        """Возвращает задачи с фильтрами по статусу, приоритету, просрочке и поиску."""
-        tasks = self.task_repository.list()
-        if status:
-            self._validate_status(status)
-            tasks = [t for t in tasks if t.status == status]
-        if priority:
-            self._validate_priority(priority)
-            tasks = [t for t in tasks if t.priority == priority]
-        if overdue_only:
-            today = date.today()
-            tasks = [t for t in tasks if t.due_date and t.due_date < today and t.status != TaskStatus.COMPLETED.value]
-        if search:
-            q = search.lower().strip()
-            tasks = [t for t in tasks if q in t.title.lower() or q in t.description.lower()]
-        return tasks
+    def listTasks(self, Status: str | None = None, Priority: str | None = None, OverdueOnly: bool = False, Search: str | None = None) -> list[Task]:
+        TaskList = self.TaskRepoObj.list()
+        if Status:
+            self._validateStatus(Status)
+            TaskList = [t for t in TaskList if t.Status == Status]
+        if Priority:
+            self._validatePriority(Priority)
+            TaskList = [t for t in TaskList if t.Priority == Priority]
+        if OverdueOnly:
+            Today = date.today()
+            TaskList = [t for t in TaskList if t.DueDate and t.DueDate < Today and t.Status != TaskStatus.COMPLETED.value]
+        if Search:
+            Query = Search.lower().strip()
+            TaskList = [t for t in TaskList if Query in t.Title.lower() or Query in t.Description.lower()]
+        return TaskList
 
-    def update_task(self, task_id: int, data: TaskUpdate) -> Task:
-        """Обновляет задачу по id и учитывает спец-флаги очистки полей."""
-        task = self.get_task(task_id)
-        new = replace(task)
+    def updateTask(self, TaskId: int, Data: TaskUpdate) -> Task:
+        OldTask = self.getTask(TaskId)
+        NewTask = replace(OldTask)
 
-        if data.title is not None:
-            new.title = data.title.strip()
-        if data.description is not None:
-            new.description = data.description
-        if data.due_date is not None:
-            new.due_date = data.due_date
-        if data.estimated_minutes is not None:
-            new.estimated_minutes = data.estimated_minutes
+        if Data.Title is not None:
+            NewTask.Title = Data.Title.strip()
+        if Data.Description is not None:
+            NewTask.Description = Data.Description
+        if Data.DueDate is not None:
+            NewTask.DueDate = Data.DueDate
+        if Data.EstimatedMinutes is not None:
+            NewTask.EstimatedMinutes = Data.EstimatedMinutes
+        if Data.ClearDueDate:
+            NewTask.DueDate = None
+        if Data.ClearEstimatedMinutes:
+            NewTask.EstimatedMinutes = None
+        if Data.Tags is not None:
+            NewTask.Tags = list(Data.Tags)
+        if Data.Status is not None:
+            self._validateStatus(Data.Status)
+            NewTask.Status = Data.Status
+        if Data.Priority is not None:
+            self._validatePriority(Data.Priority)
+            NewTask.Priority = Data.Priority
 
-        if data.clear_due_date:
-            new.due_date = None
-        if data.clear_estimated_minutes:
-            new.estimated_minutes = None
+        if not NewTask.Title.strip():
+            raise ValidationError("Task Title cannot be empty")
+        self._validateEstimatedMinutes(NewTask.EstimatedMinutes)
 
-        if data.tags is not None:
-            new.tags = list(data.tags)
-        if data.status is not None:
-            self._validate_status(data.status)
-            new.status = data.status
-        if data.priority is not None:
-            self._validate_priority(data.priority)
-            new.priority = data.priority
+        if NewTask.Status == TaskStatus.COMPLETED.value and OldTask.Status != TaskStatus.COMPLETED.value:
+            NewTask.CompletedAt = datetime.now(UTC)
+        elif OldTask.Status == TaskStatus.COMPLETED.value and NewTask.Status != TaskStatus.COMPLETED.value:
+            NewTask.CompletedAt = None
 
-        if not new.title.strip():
-            raise ValidationError("Task title cannot be empty")
-        self._validate_estimated_minutes(new.estimated_minutes)
+        NewTask.UpdatedAt = datetime.now(UTC)
+        self.TaskRepoObj.update(TaskId, NewTask)
+        self.HistoryObj.addHistory("updateTask", NewTask.Id, NewTask.Title, "Обновлены поля задачи")
+        return NewTask
 
-        if new.status == TaskStatus.COMPLETED.value and task.status != TaskStatus.COMPLETED.value:
-            new.completed_at = datetime.now(UTC)
-        elif task.status == TaskStatus.COMPLETED.value and new.status != TaskStatus.COMPLETED.value:
-            new.completed_at = None
+    def deleteTask(self, TaskId: int) -> bool:
+        TaskItem = self.getTask(TaskId)
+        Deleted = self.TaskRepoObj.delete(TaskId)
+        self.HistoryObj.addHistory("deleteTask", TaskItem.Id, TaskItem.Title, "Задача удалена")
+        return Deleted
 
-        new.updated_at = datetime.now(UTC)
-        self.task_repository.update(task_id, new)
-        self.history_service.add_history("update_task", new.id, new.title, "Обновлены поля задачи")
-        return new
+    def changeStatus(self, TaskId: int, Status: str) -> Task:
+        return self.updateTask(TaskId, TaskUpdate(Status=Status))
 
-    def delete_task(self, task_id: int) -> bool:
-        """Удаляет задачу по id."""
-        task = self.get_task(task_id)
-        deleted = self.task_repository.delete(task_id)
-        self.history_service.add_history("delete_task", task.id, task.title, "Задача удалена")
-        return deleted
+    def completeTask(self, TaskId: int) -> Task:
+        return self.changeStatus(TaskId, TaskStatus.COMPLETED.value)
 
-    def change_status(self, task_id: int, status: str) -> Task:
-        """Изменяет статус задачи."""
-        return self.update_task(task_id, TaskUpdate(status=status))
-
-    def complete_task(self, task_id: int) -> Task:
-        """Переводит задачу в статус 'Завершена'."""
-        return self.change_status(task_id, TaskStatus.COMPLETED.value)
-
-    def reopen_task(self, task_id: int) -> Task:
-        """Возвращает завершённую задачу в работу."""
-        return self.change_status(task_id, TaskStatus.IN_PROGRESS.value)
+    def reopenTask(self, TaskId: int) -> Task:
+        return self.changeStatus(TaskId, TaskStatus.IN_PROGRESS.value)

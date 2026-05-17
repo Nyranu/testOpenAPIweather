@@ -43,54 +43,54 @@ class TaskPriority(StrEnum):
 class Task:
     """Основная модель одной задачи в backend-ядре."""
 
-    id: int  # Уникальный идентификатор задачи внутри backend.
-    title: str  # Короткое название задачи.
-    description: str = ""  # Подробное описание задачи.
-    status: str = TaskStatus.NOT_STARTED.value  # Текущий статус выполнения.
-    due_date: Optional[date] = None  # Дедлайн, если задан.
-    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))  # Дата создания.
-    updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))  # Дата последнего изменения.
-    completed_at: Optional[datetime] = None  # Когда задача завершена.
-    priority: str = TaskPriority.MEDIUM.value  # Приоритет задачи.
-    estimated_minutes: Optional[int] = None  # Оценка длительности в минутах.
-    tags: list[str] = field(default_factory=list)  # Текстовые метки для группировки.
+    Id: int  # Уникальный идентификатор задачи внутри backend.
+    Title: str  # Короткое название задачи.
+    Description: str = ""  # Подробное описание задачи.
+    Status: str = TaskStatus.NOT_STARTED.value  # Текущий статус выполнения.
+    DueDate: Optional[date] = None  # Дедлайн, если задан.
+    CreatedAt: datetime = field(default_factory=lambda: datetime.now(UTC))  # Дата создания.
+    UpdatedAt: datetime = field(default_factory=lambda: datetime.now(UTC))  # Дата последнего изменения.
+    CompletedAt: Optional[datetime] = None  # Когда задача завершена.
+    Priority: str = TaskPriority.MEDIUM.value  # Приоритет задачи.
+    EstimatedMinutes: Optional[int] = None  # Оценка длительности в минутах.
+    Tags: list[str] = field(default_factory=list)  # Текстовые метки для группировки.
 
 
 @dataclass(slots=True)
 class TaskCreate:
     """Входные данные для создания новой задачи."""
 
-    title: str  # Название новой задачи.
-    description: str = ""  # Описание новой задачи.
-    status: Optional[str] = None  # Опциональный начальный статус.
-    due_date: Optional[date] = None  # Опциональный дедлайн.
-    priority: Optional[str] = None  # Опциональный приоритет.
-    estimated_minutes: Optional[int] = None  # Опциональная оценка времени.
-    tags: list[str] = field(default_factory=list)  # Опциональные метки.
+    Title: str  # Название новой задачи.
+    Description: str = ""  # Описание новой задачи.
+    Status: Optional[str] = None  # Опциональный начальный статус.
+    DueDate: Optional[date] = None  # Опциональный дедлайн.
+    Priority: Optional[str] = None  # Опциональный приоритет.
+    EstimatedMinutes: Optional[int] = None  # Опциональная оценка времени.
+    Tags: list[str] = field(default_factory=list)  # Опциональные метки.
 
 
 @dataclass(slots=True)
 class TaskUpdate:
     """Данные для частичного обновления существующей задачи."""
 
-    title: Optional[str] = None  # Новое название.
-    description: Optional[str] = None  # Новое описание.
-    status: Optional[str] = None  # Новый статус.
-    due_date: Optional[date] = None  # Новый дедлайн.
-    priority: Optional[str] = None  # Новый приоритет.
-    estimated_minutes: Optional[int] = None  # Новая оценка в минутах.
-    tags: Optional[list[str]] = None  # Новый набор меток.
-    clear_due_date: bool = False  # Явно очистить дедлайн.
-    clear_estimated_minutes: bool = False  # Явно очистить оценку времени.
+    Title: Optional[str] = None  # Новое название.
+    Description: Optional[str] = None  # Новое описание.
+    Status: Optional[str] = None  # Новый статус.
+    DueDate: Optional[date] = None  # Новый дедлайн.
+    Priority: Optional[str] = None  # Новый приоритет.
+    EstimatedMinutes: Optional[int] = None  # Новая оценка в минутах.
+    Tags: Optional[list[str]] = None  # Новый набор меток.
+    ClearDueDate: bool = False  # Явно очистить дедлайн.
+    ClearEstimatedMinutes: bool = False  # Явно очистить оценку времени.
 
 
 @dataclass(slots=True)
 class HistoryRecord:
     """Запись об одном действии пользователя над задачами."""
 
-    id: int  # Уникальный id записи истории.
-    created_at: datetime  # Время создания записи.
-    action: str  # Имя действия (create_task, update_task и т.д.).
-    task_id: Optional[int] = None  # id связанной задачи.
-    task_title: Optional[str] = None  # Заголовок связанной задачи.
-    details: Optional[str] = None  # Дополнительное пояснение действия.
+    Id: int  # Уникальный id записи истории.
+    CreatedAt: datetime  # Время создания записи.
+    Action: str  # Имя действия (createTask, updateTask и т.д.).
+    TaskId: Optional[int] = None  # id связанной задачи.
+    TaskTitle: Optional[str] = None  # Заголовок связанной задачи.
+    Details: Optional[str] = None  # Дополнительное пояснение действия.

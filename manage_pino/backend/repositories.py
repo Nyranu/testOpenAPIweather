@@ -14,7 +14,7 @@ from typing import Protocol
 from .models import HistoryRecord, Task
 
 
-class TaskRepository(Protocol):
+class TaskRepo(Protocol):
     """
     Контракт хранилища задач.
 
@@ -23,14 +23,14 @@ class TaskRepository(Protocol):
     """
 
     def create(self, task: Task) -> Task: ...
-    def get(self, task_id: int) -> Task | None: ...
+    def get(self, TaskId: int) -> Task | None: ...
     def list(self) -> list[Task]: ...
-    def update(self, task_id: int, task: Task) -> Task: ...
-    def delete(self, task_id: int) -> bool: ...
+    def update(self, TaskId: int, task: Task) -> Task: ...
+    def delete(self, TaskId: int) -> bool: ...
     def clear(self) -> None: ...
 
 
-class InMemoryTaskRepository:
+class InMemoryTaskRepo:
     """
     Простейшее хранилище задач в памяти процесса.
 
@@ -42,32 +42,32 @@ class InMemoryTaskRepository:
 
     def create(self, task: Task) -> Task:
         """Сохраняет задачу и возвращает её обратно."""
-        self._tasks[task.id] = task
+        self._tasks[task.Id] = task
         return task
 
-    def get(self, task_id: int) -> Task | None:
+    def get(self, TaskId: int) -> Task | None:
         """Ищет задачу по id. Возвращает None, если задача не найдена."""
-        return self._tasks.get(task_id)
+        return self._tasks.get(TaskId)
 
     def list(self) -> list[Task]:
         """Возвращает все задачи из памяти в виде списка."""
         return list(self._tasks.values())
 
-    def update(self, task_id: int, task: Task) -> Task:
+    def update(self, TaskId: int, task: Task) -> Task:
         """Перезаписывает задачу по id и возвращает обновлённый объект."""
-        self._tasks[task_id] = task
+        self._tasks[TaskId] = task
         return task
 
-    def delete(self, task_id: int) -> bool:
+    def delete(self, TaskId: int) -> bool:
         """Удаляет задачу по id. Возвращает True, если запись была."""
-        return self._tasks.pop(task_id, None) is not None
+        return self._tasks.pop(TaskId, None) is not None
 
     def clear(self) -> None:
         """Полностью очищает in-memory хранилище задач."""
         self._tasks.clear()
 
 
-class HistoryRepository(Protocol):
+class HistoryRepo(Protocol):
     """
     Контракт хранилища истории действий.
 
@@ -79,7 +79,7 @@ class HistoryRepository(Protocol):
     def clear(self) -> None: ...
 
 
-class InMemoryHistoryRepository:
+class InMemoryHistoryRepo:
     """
     In-memory хранилище истории действий.
 

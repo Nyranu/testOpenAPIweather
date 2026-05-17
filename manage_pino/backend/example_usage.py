@@ -11,39 +11,39 @@
 
 from datetime import date, timedelta
 
-from backend.charts import ChartService
+from backend.charts import Charts
 from backend.models import TaskCreate, TaskPriority, TaskStatus
-from backend.repositories import InMemoryHistoryRepository, InMemoryTaskRepository
-from backend.services import HistoryService, TaskService
-from backend.statistics import StatisticsService
+from backend.repositories import InMemoryHistoryRepo, InMemoryTaskRepo
+from backend.services import History, TaskManager
+from backend.statistics import Statistics
 
 
 def main() -> None:
-    task_repo = InMemoryTaskRepository()
-    history_repo = InMemoryHistoryRepository()
-    history_service = HistoryService(history_repo)
-    service = TaskService(task_repo, history_service)
+    task_repo = InMemoryTaskRepo()
+    history_repo = InMemoryHistoryRepo()
+    HistoryObj = History(history_repo)
+    service = TaskManager(task_repo, HistoryObj)
 
-    service.create_task(TaskCreate("Подготовить отчет", "Финансы", due_date=date.today(), estimated_minutes=90))
-    service.create_task(TaskCreate("Купить продукты", due_date=date.today() + timedelta(days=1), priority=TaskPriority.HIGH.value))
-    service.create_task(TaskCreate("Прочитать книгу", priority=TaskPriority.LOW.value))
-    t4 = service.create_task(TaskCreate("Сделать презентацию", due_date=date.today() - timedelta(days=1), status=TaskStatus.IN_PROGRESS.value))
+    service.createTask(TaskCreate(Title="Подготовить отчет", "Финансы", DueDate=date.today(), EstimatedMinutes=90))
+    service.createTask(TaskCreate(Title="Купить продукты", DueDate=date.today() + timedelta(days=1), Priority=TaskPriority.HIGH.value))
+    service.createTask(TaskCreate(Title="Прочитать книгу", Priority=TaskPriority.LOW.value))
+    t4 = service.createTask(TaskCreate(Title="Сделать презентацию", DueDate=date.today() - timedelta(days=1), Status=TaskStatus.IN_PROGRESS.value))
 
-    service.complete_task(1)
-    service.delete_task(t4.id)
+    service.completeTask(1)
+    service.deleteTask(t4.Id)
 
     print("Tasks:")
-    for task in service.list_tasks():
+    for task in service.listTasks():
         print(task)
 
     print("\nHistory:")
-    for record in history_service.list_history(limit=20):
+    for record in HistoryObj.listHistory(limit=20):
         print(record)
 
-    stats = StatisticsService().get_summary(service.list_tasks(), history_count=len(history_service.list_history(1000)))
+    StatisticsObj = Statistics().getSummary(service.listTasks(), HistoryCount=len(HistoryObj.listHistory(1000)))
     print("\nStats:", stats)
 
-    chart = ChartService().create_status_pie_chart(service.list_tasks())
+    chart = Charts().createStatusPieChart(service.listTasks())
     print("Chart:", chart)
 
 

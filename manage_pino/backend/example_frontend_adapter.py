@@ -6,20 +6,20 @@ backend хранит объекты Task, а фронтенд может пол�
 через функции adapters.py.
 """
 
-from backend.adapters import tasks_to_frontend_tuples
+from backend.adapters import tasksToFrontendTuples
 from backend.models import TaskCreate
-from backend.repositories import InMemoryHistoryRepository, InMemoryTaskRepository
-from backend.services import HistoryService, TaskService
+from backend.repositories import InMemoryHistoryRepo, InMemoryTaskRepo
+from backend.services import History, TaskManager
 
 
 def frontend_like_flow():
-    tasks_repo = InMemoryTaskRepository()
-    history_repo = InMemoryHistoryRepository()
-    history_service = HistoryService(history_repo)
-    task_service = TaskService(tasks_repo, history_service)
+    tasks_repo = InMemoryTaskRepo()
+    history_repo = InMemoryHistoryRepo()
+    HistoryObj = History(history_repo)
+    TaskManagerObj = TaskManager(tasks_repo, HistoryObj)
 
-    task_service.create_task(TaskCreate(title="Новая задача", description="Описание"))
+    TaskManagerObj.createTask(TaskCreate(Title="Новая задача", Description="Описание"))
 
-    backend_tasks = task_service.list_tasks()
-    frontend_tasks = tasks_to_frontend_tuples(backend_tasks)
+    backend_tasks = TaskManagerObj.listTasks()
+    frontend_tasks = tasksToFrontendTuples(backend_tasks)
     return frontend_tasks
