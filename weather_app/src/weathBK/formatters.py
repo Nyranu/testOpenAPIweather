@@ -24,6 +24,7 @@ WEATHER_CODE_MAP = {
 def weather_code_to_text(code: int) -> str:
     return WEATHER_CODE_MAP.get(code, f"Неизвестный код ({code})")
 
+
 def format_location(location: Location) -> str:
     parts = [location.name]
     if location.admin1:
@@ -35,7 +36,7 @@ def format_location(location: Location) -> str:
 
 
 def format_forecast(location: Location, forecast: list[DailyForecast]) -> str:
-    """Итг отчет"""
+    """Итоговый отчёт."""
 
     lines = [f"Прогноз для: {format_location(location)}", "-" * 72]
     for day in forecast:
