@@ -93,7 +93,7 @@ class Game:
             Button((self.ScreenWidth // 2 - 120, 420, 240, 60), "Уровень 3", self.ButtonColor, self.TextColor),
         ]
 
-        self.StartButton = Button((self.ScreenWidth - 200, 130, 150, 50), "Начать", self.ButtonColor, self.TextColor)
+        self.StartButton = Button((self.ScreenWidth // 2 - 75, 640, 150, 50), "Начать", self.ButtonColor, self.TextColor)
         self.MenuButton = Button((self.ScreenWidth // 2 - 140, 390, 280, 56), "В меню", self.ButtonColor, self.TextColor)
         self.RestartButton = Button((self.ScreenWidth // 2 - 140, 470, 280, 56), "Повторить", self.ButtonColor, self.TextColor)
 
@@ -102,7 +102,7 @@ class Game:
 
     def createLevelConfigs(self):
         return {
-            1: LevelConfig(1, 7, pygame.Rect(80, 110, 740, 520), []),
+            1: LevelConfig(1, 7, pygame.Rect(80, 120, 740, 500), []),
             2: LevelConfig(2, 10, pygame.Rect(100, 120, 700, 500), [
                 pygame.Rect(320, 260, 120, 20),
                 pygame.Rect(460, 380, 20, 120),
@@ -133,16 +133,17 @@ class Game:
     def spawnFood(self):
         Level = self.LevelConfigs[self.SelectedLevel]
         AvailablePositions = []
-        StartX = self.alignToGrid(Level.FieldRect.left)
-        EndX = self.alignToGrid(Level.FieldRect.right - self.CellSize)
-        StartY = self.alignToGrid(Level.FieldRect.top)
-        EndY = self.alignToGrid(Level.FieldRect.bottom - self.CellSize)
+        StartX = Level.FieldRect.left
+        EndX = Level.FieldRect.right - self.CellSize
+        StartY = Level.FieldRect.top
+        EndY = Level.FieldRect.bottom - self.CellSize
 
         for X in range(StartX, EndX + 1, self.CellSize):
             for Y in range(StartY, EndY + 1, self.CellSize):
                 Position = (X, Y)
                 SnakeBlocked = Position in self.Snake.Body
-                ObstacleBlocked = any(Obstacle.collidepoint(X + 1, Y + 1) for Obstacle in Level.Obstacles)
+                HeadRect = pygame.Rect(X, Y, self.CellSize, self.CellSize)
+                ObstacleBlocked = any(Obstacle.colliderect(HeadRect) for Obstacle in Level.Obstacles)
                 if not SnakeBlocked and not ObstacleBlocked:
                     AvailablePositions.append(Position)
 
@@ -191,15 +192,16 @@ class Game:
     def _checkCollision(self):
         Level = self.LevelConfigs[self.SelectedLevel]
         HeadX, HeadY = self.Snake.getHead()
+        HeadRect = pygame.Rect(HeadX, HeadY, self.CellSize, self.CellSize)
 
-        if not Level.FieldRect.collidepoint(HeadX + 1, HeadY + 1):
+        if not Level.FieldRect.contains(HeadRect):
             return True
 
         if self.Snake.getHead() in self.Snake.Body[1:]:
             return True
 
         for Obstacle in Level.Obstacles:
-            if Obstacle.collidepoint(HeadX + 1, HeadY + 1):
+            if Obstacle.colliderect(HeadRect):
                 return True
         return False
 
@@ -207,7 +209,12 @@ class Game:
         if self.GameState != "Playing" or not self.GameStarted or self.GameOver:
             return
 
-        GrowSnake = self.Food and self.Snake.getHead() == self.Food.Position
+        HeadX, HeadY = self.Snake.getHead()
+        NextHead = (
+            HeadX + self.Snake.PendingDirection[0],
+            HeadY + self.Snake.PendingDirection[1],
+        )
+        GrowSnake = self.Food and NextHead == self.Food.Position
         self.Snake.move(Grow=GrowSnake)
 
         if self._checkCollision():
