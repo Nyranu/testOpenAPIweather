@@ -179,7 +179,7 @@ class ProjectToPdfApp:
         return sorted(collected)
 
     def read_text_file(self, path: Path) -> str:
-        for encoding in ("utf-8", "utf-8-sig", "cp1251"):
+        for encoding in ("utf-8-sig", "utf-8", "cp1251"):
             try:
                 return path.read_text(encoding=encoding)
             except UnicodeDecodeError:
@@ -192,6 +192,13 @@ class ProjectToPdfApp:
         margin = 40
         line_height = 12
         max_chars_per_line = 100
+        code_wrapper = textwrap.TextWrapper(
+            width=max_chars_per_line,
+            replace_whitespace=False,
+            drop_whitespace=False,
+            break_long_words=True,
+            break_on_hyphens=False,
+        )
 
         pdf = canvas.Canvas(str(output_pdf), pagesize=A4)
 
@@ -238,7 +245,7 @@ class ProjectToPdfApp:
 
             pdf.setFont(self.pdf_mono_font, 8)
             for original_line in content.splitlines() or [""]:
-                wrapped_lines = textwrap.wrap(original_line, width=max_chars_per_line) or [""]
+                wrapped_lines = code_wrapper.wrap(original_line) or [""]
                 for wrapped in wrapped_lines:
                     if y <= margin:
                         pdf.showPage()
