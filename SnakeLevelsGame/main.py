@@ -4,11 +4,11 @@ import pygame
 
 
 class LevelConfig:
-    def __init__(self, LevelNumber, SnakeSpeed, FieldRect, Obstacles):
+    def __init__(self, LevelNumber, SnakeSpeed, FieldRect, TargetScore):
         self.LevelNumber = LevelNumber
         self.SnakeSpeed = SnakeSpeed
         self.FieldRect = FieldRect
-        self.Obstacles = Obstacles
+        self.TargetScore = TargetScore
 
 
 class Button:
@@ -70,7 +70,6 @@ class Game:
         self.TextColor = (240, 240, 240)
         self.SnakeColor = (80, 220, 120)
         self.FoodColor = (230, 80, 90)
-        self.ObstacleColor = (140, 140, 170)
         self.FieldColor = (35, 35, 48)
         self.ButtonColor = (70, 70, 95)
 
@@ -84,6 +83,7 @@ class Game:
         self.CurrentScore = 0
         self.GameStarted = False
         self.GameOver = False
+        self.LevelCompleted = False
 
         self.LevelConfigs = self.createLevelConfigs()
 
@@ -102,19 +102,9 @@ class Game:
 
     def createLevelConfigs(self):
         return {
-            1: LevelConfig(1, 7, pygame.Rect(80, 120, 740, 500), []),
-            2: LevelConfig(2, 10, pygame.Rect(100, 120, 700, 500), [
-                pygame.Rect(320, 260, 120, 20),
-                pygame.Rect(460, 380, 20, 120),
-                pygame.Rect(180, 430, 120, 20),
-            ]),
-            3: LevelConfig(3, 14, pygame.Rect(140, 140, 620, 440), [
-                pygame.Rect(240, 220, 160, 20),
-                pygame.Rect(500, 220, 20, 160),
-                pygame.Rect(320, 400, 180, 20),
-                pygame.Rect(180, 320, 20, 140),
-                pygame.Rect(580, 360, 120, 20),
-            ]),
+            1: LevelConfig(1, 7, pygame.Rect(260, 180, 380, 300), 3),
+            2: LevelConfig(2, 10, pygame.Rect(180, 140, 540, 420), 5),
+            3: LevelConfig(3, 13, pygame.Rect(100, 100, 700, 520), 8),
         }
 
     def alignToGrid(self, Value):
@@ -128,6 +118,7 @@ class Game:
         self.CurrentScore = 0
         self.GameStarted = False
         self.GameOver = False
+        self.LevelCompleted = False
         self.spawnFood()
 
     def spawnFood(self):
@@ -142,9 +133,7 @@ class Game:
             for Y in range(StartY, EndY + 1, self.CellSize):
                 Position = (X, Y)
                 SnakeBlocked = Position in self.Snake.Body
-                HeadRect = pygame.Rect(X, Y, self.CellSize, self.CellSize)
-                ObstacleBlocked = any(Obstacle.colliderect(HeadRect) for Obstacle in Level.Obstacles)
-                if not SnakeBlocked and not ObstacleBlocked:
+                if not SnakeBlocked:
                     AvailablePositions.append(Position)
 
         if AvailablePositions:
@@ -163,7 +152,7 @@ class Game:
                 pygame.quit()
                 sys.exit()
 
-            if Event.type == pygame.KEYDOWN and self.GameState == "Playing" and self.GameStarted and not self.GameOver:
+            if Event.type == pygame.KEYDOWN and self.GameState == "Playing" and self.GameStarted and not self.GameOver and not self.LevelCompleted:
                 if Event.key == pygame.K_UP:
                     self.Snake.setDirection((0, -self.CellSize))
                 elif Event.key == pygame.K_DOWN:
@@ -181,9 +170,9 @@ class Game:
                             self.startLevel(Index)
                             break
                 elif self.GameState == "Playing":
-                    if not self.GameStarted and self.StartButton.isClicked(MousePosition):
+                    if not self.GameStarted and not self.GameOver and not self.LevelCompleted and self.StartButton.isClicked(MousePosition):
                         self.GameStarted = True
-                    if self.GameOver:
+                    if self.GameOver or self.LevelCompleted:
                         if self.MenuButton.isClicked(MousePosition):
                             self.GameState = "Menu"
                         elif self.RestartButton.isClicked(MousePosition):
@@ -200,13 +189,10 @@ class Game:
         if self.Snake.getHead() in self.Snake.Body[1:]:
             return True
 
-        for Obstacle in Level.Obstacles:
-            if Obstacle.colliderect(HeadRect):
-                return True
         return False
 
     def updateGame(self):
-        if self.GameState != "Playing" or not self.GameStarted or self.GameOver:
+        if self.GameState != "Playing" or not self.GameStarted or self.GameOver or self.LevelCompleted:
             return
 
         HeadX, HeadY = self.Snake.getHead()
@@ -223,7 +209,19 @@ class Game:
 
         if self.Food and self.Snake.getHead() == self.Food.Position:
             self.CurrentScore += 1
-            self.spawnFood()
+            Level = self.LevelConfigs[self.SelectedLevel]
+            if self.CurrentScore >= Level.TargetScore:
+                self.LevelCompleted = True
+            else:
+                self.spawnFood()
+
+    def drawGrid(self, Level):
+        GridSurface = pygame.Surface((Level.FieldRect.width, Level.FieldRect.height), pygame.SRCALPHA)
+        for X in range(0, Level.FieldRect.width, self.CellSize):
+            pygame.draw.line(GridSurface, (255, 255, 255, 28), (X, 0), (X, Level.FieldRect.height))
+        for Y in range(0, Level.FieldRect.height, self.CellSize):
+            pygame.draw.line(GridSurface, (255, 255, 255, 28), (0, Y), (Level.FieldRect.width, Y))
+        self.Screen.blit(GridSurface, Level.FieldRect.topleft)
 
     def drawMenu(self):
         self.Screen.fill(self.BackgroundColor)
@@ -238,32 +236,34 @@ class Game:
         Level = self.LevelConfigs[self.SelectedLevel]
         self.Screen.fill(self.BackgroundColor)
 
-        Header = self.SmallFont.render(f"Уровень: {Level.LevelNumber}    Счёт: {self.CurrentScore}", True, self.TextColor)
+        Header = self.SmallFont.render(f"Уровень: {Level.LevelNumber}    Счёт: {self.CurrentScore} / {Level.TargetScore}", True, self.TextColor)
         self.Screen.blit(Header, (80, 40))
 
         pygame.draw.rect(self.Screen, self.FieldColor, Level.FieldRect)
         pygame.draw.rect(self.Screen, (80, 80, 100), Level.FieldRect, width=2)
+        self.drawGrid(Level)
 
-        for Obstacle in Level.Obstacles:
-            pygame.draw.rect(self.Screen, self.ObstacleColor, Obstacle)
-
-        if self.Food:
+        if self.Food and not self.LevelCompleted:
             pygame.draw.rect(self.Screen, self.FoodColor, (*self.Food.Position, self.CellSize, self.CellSize))
 
         for Segment in self.Snake.Body:
             pygame.draw.rect(self.Screen, self.SnakeColor, (*Segment, self.CellSize, self.CellSize))
 
-        if not self.GameStarted and not self.GameOver:
+        if not self.GameStarted and not self.GameOver and not self.LevelCompleted:
             self.StartButton.drawButton(self.Screen, self.SmallFont)
 
-        if self.GameOver:
+        if self.GameOver or self.LevelCompleted:
             Overlay = pygame.Surface((self.ScreenWidth, self.ScreenHeight), pygame.SRCALPHA)
             Overlay.fill((0, 0, 0, 130))
             self.Screen.blit(Overlay, (0, 0))
 
-            GameOverText = self.TitleFont.render("Игра окончена", True, self.TextColor)
+            if self.LevelCompleted:
+                TitleText = self.TitleFont.render("Уровень пройден", True, self.TextColor)
+            else:
+                TitleText = self.TitleFont.render("Игра окончена", True, self.TextColor)
+
             ScoreText = self.MainFont.render(f"Итоговый счёт: {self.CurrentScore}", True, self.TextColor)
-            self.Screen.blit(GameOverText, GameOverText.get_rect(center=(self.ScreenWidth // 2, 280)))
+            self.Screen.blit(TitleText, TitleText.get_rect(center=(self.ScreenWidth // 2, 280)))
             self.Screen.blit(ScoreText, ScoreText.get_rect(center=(self.ScreenWidth // 2, 340)))
             self.MenuButton.drawButton(self.Screen, self.MainFont)
             self.RestartButton.drawButton(self.Screen, self.MainFont)
@@ -279,7 +279,7 @@ class Game:
             else:
                 self.drawGame()
                 Level = self.LevelConfigs[self.SelectedLevel]
-                self.Clock.tick(Level.SnakeSpeed if self.GameStarted and not self.GameOver else 60)
+                self.Clock.tick(Level.SnakeSpeed if self.GameStarted and not self.GameOver and not self.LevelCompleted else 60)
 
             pygame.display.flip()
 

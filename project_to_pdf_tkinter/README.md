@@ -20,11 +20,10 @@
 
 ```bash
 cd project_to_pdf_tkinter
+python -m venv .venv
 pip install -r requirements.txt
 python main.py
 ```
-
-## Как пользоваться
 
 1. Нажмите **«Выбрать папку»** и выберите каталог проекта.
 2. Нажмите **«Конвертировать в PDF»**.
