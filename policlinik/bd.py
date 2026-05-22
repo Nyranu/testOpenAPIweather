@@ -29,10 +29,10 @@ class Client(Base):
     __tablename__ = "clients"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True, nullable=False)
-    full_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    userId: Mapped[int] = mapped_column("user_id", ForeignKey("users.id"), unique=True, nullable=False)
+    fullName: Mapped[str] = mapped_column("full_name", String(255), nullable=False)
     age: Mapped[int] = mapped_column(Integer, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    createdAt: Mapped[datetime] = mapped_column("created_at", DateTime, default=datetime.utcnow, nullable=False)
 
     user: Mapped[User] = relationship()
 
@@ -41,8 +41,8 @@ class Doctor(Base):
     __tablename__ = "doctors"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True, nullable=False)
-    full_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    userId: Mapped[int] = mapped_column("user_id", ForeignKey("users.id"), unique=True, nullable=False)
+    fullName: Mapped[str] = mapped_column("full_name", String(255), nullable=False)
     specialization: Mapped[str] = mapped_column(String(100), nullable=False)
 
     user: Mapped[User] = relationship()
@@ -52,25 +52,25 @@ class AppointmentSlot(Base):
     __tablename__ = "appointment_slots"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    doctor_id: Mapped[int] = mapped_column(ForeignKey("doctors.id"), nullable=False)
-    date_time: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    is_busy: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    doctorId: Mapped[int] = mapped_column("doctor_id", ForeignKey("doctors.id"), nullable=False)
+    dateTime: Mapped[datetime] = mapped_column("date_time", DateTime, nullable=False)
+    isBusy: Mapped[bool] = mapped_column("is_busy", Boolean, default=False, nullable=False)
 
 
 class Appointment(Base):
     __tablename__ = "appointments"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    client_id: Mapped[int] = mapped_column(ForeignKey("clients.id"), nullable=False)
-    doctor_id: Mapped[int] = mapped_column(ForeignKey("doctors.id"), nullable=False)
-    slot_id: Mapped[int] = mapped_column(ForeignKey("appointment_slots.id"), unique=True, nullable=False)
+    clientId: Mapped[int] = mapped_column("client_id", ForeignKey("clients.id"), nullable=False)
+    doctorId: Mapped[int] = mapped_column("doctor_id", ForeignKey("doctors.id"), nullable=False)
+    slotId: Mapped[int] = mapped_column("slot_id", ForeignKey("appointment_slots.id"), unique=True, nullable=False)
     symptoms: Mapped[str] = mapped_column(String(500), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    createdAt: Mapped[datetime] = mapped_column("created_at", DateTime, default=datetime.utcnow, nullable=False)
 
 
 @dataclass
 class ClientRegistrationData:
-    full_name: str
+    fullName: str
     age: int
     username: str
     password: str
@@ -78,7 +78,7 @@ class ClientRegistrationData:
 
 @dataclass
 class DoctorRegistrationData:
-    full_name: str
+    fullName: str
     specialization: str
     username: str
     password: str
@@ -88,13 +88,13 @@ engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
 
 
-def init_db() -> None:
+def initDb() -> None:
     Base.metadata.create_all(engine)
     with SessionLocal() as session:
-        seed_data(session)
+        seedData(session)
 
 
-def seed_data(session: Session) -> None:
+def seedData(session: Session) -> None:
     admin = session.scalar(select(User).where(User.username == "admin"))
     if admin is None:
         session.add(User(username="admin", password="admin", role="admin"))
@@ -105,47 +105,47 @@ def seed_data(session: Session) -> None:
         ("doctor3", "doctor3", "Сергей Иванов", "Невролог"),
     ]
 
-    doctors_for_slots: list[Doctor] = []
-    for username, password, full_name, specialization in defaults:
+    doctorsForSlots: list[Doctor] = []
+    for username, password, fullName, specialization in defaults:
         user = session.scalar(select(User).where(User.username == username))
         if user is None:
             user = User(username=username, password=password, role="doctor")
             session.add(user)
             session.flush()
 
-        doctor = session.scalar(select(Doctor).where(Doctor.user_id == user.id))
+        doctor = session.scalar(select(Doctor).where(Doctor.userId == user.id))
         if doctor is None:
             doctor = Doctor(
-                user_id=user.id,
-                full_name=full_name,
+                userId=user.id,
+                fullName=fullName,
                 specialization=specialization,
             )
             session.add(doctor)
             session.flush()
-        doctors_for_slots.append(doctor)
+        doctorsForSlots.append(doctor)
 
-    slot_times = [
+    slotTimes = [
         datetime(2026, 5, 23, 10, 0),
         datetime(2026, 5, 23, 11, 0),
         datetime(2026, 5, 24, 10, 0),
         datetime(2026, 5, 24, 11, 0),
     ]
-    for doctor in doctors_for_slots:
-        for slot_time in slot_times:
+    for doctor in doctorsForSlots:
+        for slotTime in slotTimes:
             exists = session.scalar(
                 select(AppointmentSlot).where(
-                    AppointmentSlot.doctor_id == doctor.id,
-                    AppointmentSlot.date_time == slot_time,
+                    AppointmentSlot.doctorId == doctor.id,
+                    AppointmentSlot.dateTime == slotTime,
                 )
             )
             if exists is None:
-                session.add(AppointmentSlot(doctor_id=doctor.id, date_time=slot_time, is_busy=False))
+                session.add(AppointmentSlot(doctorId=doctor.id, dateTime=slotTime, isBusy=False))
 
     session.commit()
 
 
-def register_client(data: ClientRegistrationData) -> tuple[bool, str, Optional[Client]]:
-    if not data.full_name.strip():
+def registerClient(data: ClientRegistrationData) -> tuple[bool, str, Optional[Client]]:
+    if not data.fullName.strip():
         return False, "ФИО не может быть пустым.", None
     if data.age <= 0:
         return False, "Возраст должен быть положительным числом.", None
@@ -155,15 +155,15 @@ def register_client(data: ClientRegistrationData) -> tuple[bool, str, Optional[C
         return False, "Пароль не может быть пустым.", None
 
     with SessionLocal() as session:
-        existing_user = session.scalar(select(User).where(User.username == data.username))
-        if existing_user:
+        existingUser = session.scalar(select(User).where(User.username == data.username))
+        if existingUser:
             return False, "Логин уже занят.", None
 
         user = User(username=data.username.strip(), password=data.password.strip(), role="client")
         session.add(user)
         session.flush()
 
-        client = Client(user_id=user.id, full_name=data.full_name.strip(), age=data.age)
+        client = Client(userId=user.id, fullName=data.fullName.strip(), age=data.age)
         session.add(client)
         session.commit()
         session.refresh(client)
@@ -177,102 +177,102 @@ def authenticate(username: str, password: str) -> Optional[User]:
         )
 
 
-def get_client_by_user_id(user_id: int) -> Optional[Client]:
+def getClientByUserId(userId: int) -> Optional[Client]:
     with SessionLocal() as session:
-        return session.scalar(select(Client).where(Client.user_id == user_id))
+        return session.scalar(select(Client).where(Client.userId == userId))
 
 
-def get_doctor_by_user_id(user_id: int) -> Optional[Doctor]:
+def getDoctorByUserId(userId: int) -> Optional[Doctor]:
     with SessionLocal() as session:
-        return session.scalar(select(Doctor).where(Doctor.user_id == user_id))
+        return session.scalar(select(Doctor).where(Doctor.userId == userId))
 
 
-def list_doctors() -> list[Doctor]:
+def listDoctors() -> list[Doctor]:
     with SessionLocal() as session:
         return list(session.scalars(select(Doctor).order_by(Doctor.id)).all())
 
 
-def list_free_slots_by_doctor(doctor_id: int) -> list[AppointmentSlot]:
+def listFreeSlotsByDoctor(doctorId: int) -> list[AppointmentSlot]:
     with SessionLocal() as session:
         return list(
             session.scalars(
                 select(AppointmentSlot)
-                .where(AppointmentSlot.doctor_id == doctor_id, AppointmentSlot.is_busy.is_(False))
-                .order_by(AppointmentSlot.date_time)
+                .where(AppointmentSlot.doctorId == doctorId, AppointmentSlot.isBusy.is_(False))
+                .order_by(AppointmentSlot.dateTime)
             ).all()
         )
 
 
-def create_appointment(client_id: int, doctor_id: int, slot_id: int, symptoms: str) -> tuple[bool, str]:
+def createAppointment(clientId: int, doctorId: int, slotId: int, symptoms: str) -> tuple[bool, str]:
     if not symptoms.strip():
         return False, "Симптомы не могут быть пустыми."
 
     with SessionLocal() as session:
-        doctor = session.get(Doctor, doctor_id)
+        doctor = session.get(Doctor, doctorId)
         if not doctor:
             return False, "Врач не найден."
 
-        slot = session.get(AppointmentSlot, slot_id)
-        if not slot or slot.doctor_id != doctor_id:
+        slot = session.get(AppointmentSlot, slotId)
+        if not slot or slot.doctorId != doctorId:
             return False, "Слот не найден у выбранного врача."
-        if slot.is_busy:
+        if slot.isBusy:
             return False, "Этот слот уже занят."
 
         appointment = Appointment(
-            client_id=client_id,
-            doctor_id=doctor_id,
-            slot_id=slot_id,
+            clientId=clientId,
+            doctorId=doctorId,
+            slotId=slotId,
             symptoms=symptoms.strip(),
         )
-        slot.is_busy = True
+        slot.isBusy = True
         session.add(appointment)
         session.commit()
         return True, "Запись успешно создана."
 
 
-def list_client_appointments(client_id: int) -> list[tuple[Appointment, Doctor, AppointmentSlot]]:
+def listClientAppointments(clientId: int) -> list[tuple[Appointment, Doctor, AppointmentSlot]]:
     with SessionLocal() as session:
         rows = session.execute(
             select(Appointment, Doctor, AppointmentSlot)
-            .join(Doctor, Appointment.doctor_id == Doctor.id)
-            .join(AppointmentSlot, Appointment.slot_id == AppointmentSlot.id)
-            .where(Appointment.client_id == client_id)
-            .order_by(AppointmentSlot.date_time)
+            .join(Doctor, Appointment.doctorId == Doctor.id)
+            .join(AppointmentSlot, Appointment.slotId == AppointmentSlot.id)
+            .where(Appointment.clientId == clientId)
+            .order_by(AppointmentSlot.dateTime)
         ).all()
         return list(rows)
 
 
-def list_doctor_appointments(doctor_id: int) -> list[tuple[Appointment, Client, AppointmentSlot]]:
+def listDoctorAppointments(doctorId: int) -> list[tuple[Appointment, Client, AppointmentSlot]]:
     with SessionLocal() as session:
         rows = session.execute(
             select(Appointment, Client, AppointmentSlot)
-            .join(Client, Appointment.client_id == Client.id)
-            .join(AppointmentSlot, Appointment.slot_id == AppointmentSlot.id)
-            .where(Appointment.doctor_id == doctor_id)
-            .order_by(AppointmentSlot.date_time)
+            .join(Client, Appointment.clientId == Client.id)
+            .join(AppointmentSlot, Appointment.slotId == AppointmentSlot.id)
+            .where(Appointment.doctorId == doctorId)
+            .order_by(AppointmentSlot.dateTime)
         ).all()
         return list(rows)
 
 
-def list_all_clients() -> list[Client]:
+def listAllClients() -> list[Client]:
     with SessionLocal() as session:
         return list(session.scalars(select(Client).order_by(Client.id)).all())
 
 
-def list_all_appointments() -> list[tuple[Appointment, Client, Doctor, AppointmentSlot]]:
+def listAllAppointments() -> list[tuple[Appointment, Client, Doctor, AppointmentSlot]]:
     with SessionLocal() as session:
         rows = session.execute(
             select(Appointment, Client, Doctor, AppointmentSlot)
-            .join(Client, Appointment.client_id == Client.id)
-            .join(Doctor, Appointment.doctor_id == Doctor.id)
-            .join(AppointmentSlot, Appointment.slot_id == AppointmentSlot.id)
-            .order_by(AppointmentSlot.date_time)
+            .join(Client, Appointment.clientId == Client.id)
+            .join(Doctor, Appointment.doctorId == Doctor.id)
+            .join(AppointmentSlot, Appointment.slotId == AppointmentSlot.id)
+            .order_by(AppointmentSlot.dateTime)
         ).all()
         return list(rows)
 
 
-def add_doctor(data: DoctorRegistrationData) -> tuple[bool, str, Optional[Doctor]]:
-    if not data.full_name.strip():
+def addDoctor(data: DoctorRegistrationData) -> tuple[bool, str, Optional[Doctor]]:
+    if not data.fullName.strip():
         return False, "ФИО врача не может быть пустым.", None
     if not data.specialization.strip():
         return False, "Специализация не может быть пустой.", None
@@ -290,8 +290,8 @@ def add_doctor(data: DoctorRegistrationData) -> tuple[bool, str, Optional[Doctor
         session.flush()
 
         doctor = Doctor(
-            user_id=user.id,
-            full_name=data.full_name.strip(),
+            userId=user.id,
+            fullName=data.fullName.strip(),
             specialization=data.specialization.strip(),
         )
         session.add(doctor)
@@ -300,22 +300,22 @@ def add_doctor(data: DoctorRegistrationData) -> tuple[bool, str, Optional[Doctor
         return True, "Врач добавлен.", doctor
 
 
-def add_slot(doctor_id: int, date_time: datetime) -> tuple[bool, str]:
+def addSlot(doctorId: int, dateTime: datetime) -> tuple[bool, str]:
     with SessionLocal() as session:
-        doctor = session.get(Doctor, doctor_id)
+        doctor = session.get(Doctor, doctorId)
         if not doctor:
             return False, "Врач не найден."
 
         exists = session.scalar(
             select(AppointmentSlot).where(
-                AppointmentSlot.doctor_id == doctor_id,
-                AppointmentSlot.date_time == date_time,
+                AppointmentSlot.doctorId == doctorId,
+                AppointmentSlot.dateTime == dateTime,
             )
         )
         if exists is not None:
             return False, "Такой слот у этого врача уже существует."
 
-        slot = AppointmentSlot(doctor_id=doctor_id, date_time=date_time, is_busy=False)
+        slot = AppointmentSlot(doctorId=doctorId, dateTime=dateTime, isBusy=False)
         session.add(slot)
         session.commit()
         return True, "Слот добавлен."

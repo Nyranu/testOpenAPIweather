@@ -6,20 +6,20 @@ from datetime import datetime
 from bd import (
     ClientRegistrationData,
     DoctorRegistrationData,
-    add_doctor,
-    add_slot,
+    addDoctor,
+    addSlot,
     authenticate,
-    create_appointment,
-    get_client_by_user_id,
-    get_doctor_by_user_id,
-    init_db,
-    list_all_appointments,
-    list_all_clients,
-    list_client_appointments,
-    list_doctor_appointments,
-    list_doctors,
-    list_free_slots_by_doctor,
-    register_client,
+    createAppointment,
+    getClientByUserId,
+    getDoctorByUserId,
+    initDb,
+    listAllAppointments,
+    listAllClients,
+    listClientAppointments,
+    listDoctorAppointments,
+    listDoctors,
+    listFreeSlotsByDoctor,
+    registerClient,
 )
 
 
@@ -29,7 +29,7 @@ class LoginData:
     password: str
 
 
-def safe_int_input(prompt: str) -> int | None:
+def safeIntInput(prompt: str) -> int | None:
     value = input(prompt).strip()
     try:
         return int(value)
@@ -38,54 +38,54 @@ def safe_int_input(prompt: str) -> int | None:
         return None
 
 
-def show_doctors() -> None:
-    doctors = list_doctors()
+def showDoctors() -> None:
+    doctors = listDoctors()
     if not doctors:
         print("Врачей пока нет.")
         return
     for doctor in doctors:
-        print(f"{doctor.id}. {doctor.full_name} ({doctor.specialization})")
+        print(f"{doctor.id}. {doctor.fullName} ({doctor.specialization})")
 
 
-def registration_flow() -> None:
+def registrationFlow() -> None:
     print("\n=== Регистрация клиента ===")
-    full_name = input("ФИО: ").strip()
-    age = safe_int_input("Возраст: ")
+    fullName = input("ФИО: ").strip()
+    age = safeIntInput("Возраст: ")
     if age is None:
         return
     username = input("Логин: ").strip()
     password = input("Пароль: ").strip()
 
-    data = ClientRegistrationData(full_name=full_name, age=age, username=username, password=password)
-    success, message, client = register_client(data)
+    data = ClientRegistrationData(fullName=fullName, age=age, username=username, password=password)
+    success, message, client = registerClient(data)
     print(message)
     if success and client:
         print(f"Ваш номер медицинской карты: {client.id}")
 
 
-def login_flow() -> None:
+def loginFlow() -> None:
     print("\n=== Вход ===")
-    login_data = LoginData(
+    loginData = LoginData(
         username=input("Логин: ").strip(),
         password=input("Пароль: ").strip(),
     )
-    user = authenticate(login_data.username, login_data.password)
+    user = authenticate(loginData.username, loginData.password)
     if not user:
         print("Неверный логин или пароль.")
         return
 
     if user.role == "client":
-        client_menu(user.id)
+        clientMenu(user.id)
     elif user.role == "admin":
-        admin_menu()
+        adminMenu()
     elif user.role == "doctor":
-        doctor_menu(user.id)
+        doctorMenu(user.id)
     else:
         print("Неизвестная роль пользователя.")
 
 
-def client_menu(user_id: int) -> None:
-    client = get_client_by_user_id(user_id)
+def clientMenu(userId: int) -> None:
+    client = getClientByUserId(userId)
     if not client:
         print("Профиль клиента не найден.")
         return
@@ -99,37 +99,37 @@ def client_menu(user_id: int) -> None:
         choice = input("Выберите действие: ").strip()
 
         if choice == "1":
-            print(f"Медкарта №{client.id}: {client.full_name}, возраст {client.age}")
+            print(f"Медкарта №{client.id}: {client.fullName}, возраст {client.age}")
         elif choice == "2":
-            show_doctors()
-            doctor_id = safe_int_input("Выберите ID врача: ")
-            if doctor_id is None:
+            showDoctors()
+            doctorId = safeIntInput("Выберите ID врача: ")
+            if doctorId is None:
                 continue
 
-            free_slots = list_free_slots_by_doctor(doctor_id)
-            if not free_slots:
+            freeSlots = listFreeSlotsByDoctor(doctorId)
+            if not freeSlots:
                 print("У выбранного врача нет свободных слотов.")
                 continue
 
             print("Свободные слоты:")
-            for slot in free_slots:
-                print(f"{slot.id}. {slot.date_time.strftime('%Y-%m-%d %H:%M')}")
+            for slot in freeSlots:
+                print(f"{slot.id}. {slot.dateTime.strftime('%Y-%m-%d %H:%M')}")
 
-            slot_id = safe_int_input("Выберите ID слота: ")
-            if slot_id is None:
+            slotId = safeIntInput("Выберите ID слота: ")
+            if slotId is None:
                 continue
             symptoms = input("Опишите симптомы: ").strip()
-            success, message = create_appointment(client.id, doctor_id, slot_id, symptoms)
+            success, message = createAppointment(client.id, doctorId, slotId, symptoms)
             print(message)
         elif choice == "3":
-            appointments = list_client_appointments(client.id)
+            appointments = listClientAppointments(client.id)
             if not appointments:
                 print("У вас пока нет записей.")
                 continue
             for appointment, doctor, slot in appointments:
                 print(
-                    f"Запись #{appointment.id}: {slot.date_time.strftime('%Y-%m-%d %H:%M')} | "
-                    f"{doctor.full_name} ({doctor.specialization}) | Симптомы: {appointment.symptoms}"
+                    f"Запись #{appointment.id}: {slot.dateTime.strftime('%Y-%m-%d %H:%M')} | "
+                    f"{doctor.fullName} ({doctor.specialization}) | Симптомы: {appointment.symptoms}"
                 )
         elif choice == "0":
             break
@@ -137,28 +137,28 @@ def client_menu(user_id: int) -> None:
             print("Некорректный выбор.")
 
 
-def doctor_menu(user_id: int) -> None:
-    doctor = get_doctor_by_user_id(user_id)
+def doctorMenu(userId: int) -> None:
+    doctor = getDoctorByUserId(userId)
     if not doctor:
         print("Профиль врача не найден.")
         return
 
     while True:
         print("\n=== Меню врача ===")
-        print(f"Вы вошли как: {doctor.full_name} ({doctor.specialization})")
+        print(f"Вы вошли как: {doctor.fullName} ({doctor.specialization})")
         print("1. Посмотреть записи к себе")
         print("0. Выйти из аккаунта")
         choice = input("Выберите действие: ").strip()
 
         if choice == "1":
-            appointments = list_doctor_appointments(doctor.id)
+            appointments = listDoctorAppointments(doctor.id)
             if not appointments:
                 print("Записей к вам пока нет.")
                 continue
             for appointment, client, slot in appointments:
                 print(
-                    f"{slot.date_time.strftime('%Y-%m-%d %H:%M')} | "
-                    f"Клиент: {client.full_name} (медкарта {client.id}) | "
+                    f"{slot.dateTime.strftime('%Y-%m-%d %H:%M')} | "
+                    f"Клиент: {client.fullName} (медкарта {client.id}) | "
                     f"Симптомы: {appointment.symptoms}"
                 )
         elif choice == "0":
@@ -167,7 +167,7 @@ def doctor_menu(user_id: int) -> None:
             print("Некорректный выбор.")
 
 
-def admin_menu() -> None:
+def adminMenu() -> None:
     while True:
         print("\n=== Меню администратора ===")
         print("1. Посмотреть всех клиентов")
@@ -179,33 +179,33 @@ def admin_menu() -> None:
         choice = input("Выберите действие: ").strip()
 
         if choice == "1":
-            clients = list_all_clients()
+            clients = listAllClients()
             if not clients:
                 print("Клиентов пока нет.")
                 continue
             for client in clients:
-                print(f"{client.id}. {client.full_name}, возраст {client.age}")
+                print(f"{client.id}. {client.fullName}, возраст {client.age}")
         elif choice == "2":
-            appointments = list_all_appointments()
+            appointments = listAllAppointments()
             if not appointments:
                 print("Записей пока нет.")
                 continue
             for appointment, client, doctor, slot in appointments:
                 print(
-                    f"#{appointment.id} | {slot.date_time.strftime('%Y-%m-%d %H:%M')} | "
-                    f"Клиент: {client.full_name} | Врач: {doctor.full_name} ({doctor.specialization}) | "
+                    f"#{appointment.id} | {slot.dateTime.strftime('%Y-%m-%d %H:%M')} | "
+                    f"Клиент: {client.fullName} | Врач: {doctor.fullName} ({doctor.specialization}) | "
                     f"Симптомы: {appointment.symptoms}"
                 )
         elif choice == "3":
-            show_doctors()
+            showDoctors()
         elif choice == "4":
-            full_name = input("ФИО врача: ").strip()
+            fullName = input("ФИО врача: ").strip()
             specialization = input("Специализация: ").strip()
             username = input("Логин врача: ").strip()
             password = input("Пароль врача: ").strip()
-            success, message, doctor = add_doctor(
+            success, message, doctor = addDoctor(
                 DoctorRegistrationData(
-                    full_name=full_name,
+                    fullName=fullName,
                     specialization=specialization,
                     username=username,
                     password=password,
@@ -215,17 +215,17 @@ def admin_menu() -> None:
             if success and doctor:
                 print(f"ID врача: {doctor.id}")
         elif choice == "5":
-            show_doctors()
-            doctor_id = safe_int_input("ID врача: ")
-            if doctor_id is None:
+            showDoctors()
+            doctorId = safeIntInput("ID врача: ")
+            if doctorId is None:
                 continue
-            dt_raw = input("Дата и время (YYYY-MM-DD HH:MM): ").strip()
+            dtRaw = input("Дата и время (YYYY-MM-DD HH:MM): ").strip()
             try:
-                dt_value = datetime.strptime(dt_raw, "%Y-%m-%d %H:%M")
+                dtValue = datetime.strptime(dtRaw, "%Y-%m-%d %H:%M")
             except ValueError:
                 print("Некорректный формат даты.")
                 continue
-            success, message = add_slot(doctor_id, dt_value)
+            success, message = addSlot(doctorId, dtValue)
             print(message)
         elif choice == "0":
             break
@@ -234,7 +234,7 @@ def admin_menu() -> None:
 
 
 def main() -> None:
-    init_db()
+    initDb()
     while True:
         print("\n=== Поликлиника ===")
         print("1. Войти в систему")
@@ -243,9 +243,9 @@ def main() -> None:
         choice = input("Выберите действие: ").strip()
 
         if choice == "1":
-            login_flow()
+            loginFlow()
         elif choice == "2":
-            registration_flow()
+            registrationFlow()
         elif choice == "0":
             print("До свидания!")
             break
