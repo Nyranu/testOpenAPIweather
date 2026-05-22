@@ -5,11 +5,13 @@ from datetime import datetime
 
 from bd import (
     ClientRegistrationData,
+    DoctorRegistrationData,
     add_doctor,
     add_slot,
     authenticate,
     create_appointment,
     get_client_by_user_id,
+    get_doctor_by_user_id,
     init_db,
     list_all_appointments,
     list_all_clients,
@@ -77,7 +79,7 @@ def login_flow() -> None:
     elif user.role == "admin":
         admin_menu()
     elif user.role == "doctor":
-        doctor_menu()
+        doctor_menu(user.id)
     else:
         print("Неизвестная роль пользователя.")
 
@@ -135,22 +137,23 @@ def client_menu(user_id: int) -> None:
             print("Некорректный выбор.")
 
 
-def doctor_menu() -> None:
+def doctor_menu(user_id: int) -> None:
+    doctor = get_doctor_by_user_id(user_id)
+    if not doctor:
+        print("Профиль врача не найден.")
+        return
+
     while True:
         print("\n=== Меню врача ===")
+        print(f"Вы вошли как: {doctor.full_name} ({doctor.specialization})")
         print("1. Посмотреть записи к себе")
         print("0. Выйти из аккаунта")
         choice = input("Выберите действие: ").strip()
 
         if choice == "1":
-            show_doctors()
-            doctor_id = safe_int_input("Выберите свой ID: ")
-            if doctor_id is None:
-                continue
-
-            appointments = list_doctor_appointments(doctor_id)
+            appointments = list_doctor_appointments(doctor.id)
             if not appointments:
-                print("Записей к выбранному врачу нет.")
+                print("Записей к вам пока нет.")
                 continue
             for appointment, client, slot in appointments:
                 print(
@@ -198,8 +201,19 @@ def admin_menu() -> None:
         elif choice == "4":
             full_name = input("ФИО врача: ").strip()
             specialization = input("Специализация: ").strip()
-            doctor = add_doctor(full_name, specialization)
-            print(f"Врач добавлен, ID: {doctor.id}")
+            username = input("Логин врача: ").strip()
+            password = input("Пароль врача: ").strip()
+            success, message, doctor = add_doctor(
+                DoctorRegistrationData(
+                    full_name=full_name,
+                    specialization=specialization,
+                    username=username,
+                    password=password,
+                )
+            )
+            print(message)
+            if success and doctor:
+                print(f"ID врача: {doctor.id}")
         elif choice == "5":
             show_doctors()
             doctor_id = safe_int_input("ID врача: ")

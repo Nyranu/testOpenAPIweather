@@ -41,8 +41,11 @@ class Doctor(Base):
     __tablename__ = "doctors"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True, nullable=False)
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
     specialization: Mapped[str] = mapped_column(String(100), nullable=False)
+
+    user: Mapped[User] = relationship()
 
 
 class AppointmentSlot(Base):
@@ -73,6 +76,14 @@ class ClientRegistrationData:
     password: str
 
 
+@dataclass
+class DoctorRegistrationData:
+    full_name: str
+    specialization: str
+    username: str
+    password: str
+
+
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
 
@@ -88,39 +99,71 @@ def seed_data(session: Session) -> None:
     if admin is None:
         session.add(User(username="admin", password="admin", role="admin"))
 
-    if session.scalar(select(Doctor.id).limit(1)) is None:
-        doctors = [
-            Doctor(full_name="Иван Петров", specialization="Терапевт"),
-            Doctor(full_name="Ольга Смирнова", specialization="Хирург"),
-            Doctor(full_name="Сергей Иванов", specialization="Невролог"),
-        ]
-        session.add_all(doctors)
-        session.flush()
+    defaults = [
+        ("doctor1", "doctor1", "Иван Петров", "Терапевт"),
+        ("doctor2", "doctor2", "Ольга Смирнова", "Хирург"),
+        ("doctor3", "doctor3", "Сергей Иванов", "Невролог"),
+    ]
 
-        slot_times = [
-            datetime(2026, 5, 23, 10, 0),
-            datetime(2026, 5, 23, 11, 0),
-            datetime(2026, 5, 24, 10, 0),
-            datetime(2026, 5, 24, 11, 0),
-        ]
-        for doctor in doctors:
-            for slot_time in slot_times:
+    doctors_for_slots: list[Doctor] = []
+    for username, password, full_name, specialization in defaults:
+        user = session.scalar(select(User).where(User.username == username))
+        if user is None:
+            user = User(username=username, password=password, role="doctor")
+            session.add(user)
+            session.flush()
+
+        doctor = session.scalar(select(Doctor).where(Doctor.user_id == user.id))
+        if doctor is None:
+            doctor = Doctor(
+                user_id=user.id,
+                full_name=full_name,
+                specialization=specialization,
+            )
+            session.add(doctor)
+            session.flush()
+        doctors_for_slots.append(doctor)
+
+    slot_times = [
+        datetime(2026, 5, 23, 10, 0),
+        datetime(2026, 5, 23, 11, 0),
+        datetime(2026, 5, 24, 10, 0),
+        datetime(2026, 5, 24, 11, 0),
+    ]
+    for doctor in doctors_for_slots:
+        for slot_time in slot_times:
+            exists = session.scalar(
+                select(AppointmentSlot).where(
+                    AppointmentSlot.doctor_id == doctor.id,
+                    AppointmentSlot.date_time == slot_time,
+                )
+            )
+            if exists is None:
                 session.add(AppointmentSlot(doctor_id=doctor.id, date_time=slot_time, is_busy=False))
 
     session.commit()
 
 
 def register_client(data: ClientRegistrationData) -> tuple[bool, str, Optional[Client]]:
+    if not data.full_name.strip():
+        return False, "ФИО не может быть пустым.", None
+    if data.age <= 0:
+        return False, "Возраст должен быть положительным числом.", None
+    if not data.username.strip():
+        return False, "Логин не может быть пустым.", None
+    if not data.password.strip():
+        return False, "Пароль не может быть пустым.", None
+
     with SessionLocal() as session:
         existing_user = session.scalar(select(User).where(User.username == data.username))
         if existing_user:
             return False, "Логин уже занят.", None
 
-        user = User(username=data.username, password=data.password, role="client")
+        user = User(username=data.username.strip(), password=data.password.strip(), role="client")
         session.add(user)
         session.flush()
 
-        client = Client(user_id=user.id, full_name=data.full_name, age=data.age)
+        client = Client(user_id=user.id, full_name=data.full_name.strip(), age=data.age)
         session.add(client)
         session.commit()
         session.refresh(client)
@@ -137,6 +180,11 @@ def authenticate(username: str, password: str) -> Optional[User]:
 def get_client_by_user_id(user_id: int) -> Optional[Client]:
     with SessionLocal() as session:
         return session.scalar(select(Client).where(Client.user_id == user_id))
+
+
+def get_doctor_by_user_id(user_id: int) -> Optional[Doctor]:
+    with SessionLocal() as session:
+        return session.scalar(select(Doctor).where(Doctor.user_id == user_id))
 
 
 def list_doctors() -> list[Doctor]:
@@ -156,6 +204,9 @@ def list_free_slots_by_doctor(doctor_id: int) -> list[AppointmentSlot]:
 
 
 def create_appointment(client_id: int, doctor_id: int, slot_id: int, symptoms: str) -> tuple[bool, str]:
+    if not symptoms.strip():
+        return False, "Симптомы не могут быть пустыми."
+
     with SessionLocal() as session:
         doctor = session.get(Doctor, doctor_id)
         if not doctor:
@@ -171,7 +222,7 @@ def create_appointment(client_id: int, doctor_id: int, slot_id: int, symptoms: s
             client_id=client_id,
             doctor_id=doctor_id,
             slot_id=slot_id,
-            symptoms=symptoms,
+            symptoms=symptoms.strip(),
         )
         slot.is_busy = True
         session.add(appointment)
@@ -220,13 +271,33 @@ def list_all_appointments() -> list[tuple[Appointment, Client, Doctor, Appointme
         return list(rows)
 
 
-def add_doctor(full_name: str, specialization: str) -> Doctor:
+def add_doctor(data: DoctorRegistrationData) -> tuple[bool, str, Optional[Doctor]]:
+    if not data.full_name.strip():
+        return False, "ФИО врача не может быть пустым.", None
+    if not data.specialization.strip():
+        return False, "Специализация не может быть пустой.", None
+    if not data.username.strip():
+        return False, "Логин не может быть пустым.", None
+    if not data.password.strip():
+        return False, "Пароль не может быть пустым.", None
+
     with SessionLocal() as session:
-        doctor = Doctor(full_name=full_name, specialization=specialization)
+        if session.scalar(select(User).where(User.username == data.username.strip())):
+            return False, "Логин уже занят.", None
+
+        user = User(username=data.username.strip(), password=data.password.strip(), role="doctor")
+        session.add(user)
+        session.flush()
+
+        doctor = Doctor(
+            user_id=user.id,
+            full_name=data.full_name.strip(),
+            specialization=data.specialization.strip(),
+        )
         session.add(doctor)
         session.commit()
         session.refresh(doctor)
-        return doctor
+        return True, "Врач добавлен.", doctor
 
 
 def add_slot(doctor_id: int, date_time: datetime) -> tuple[bool, str]:
@@ -234,6 +305,15 @@ def add_slot(doctor_id: int, date_time: datetime) -> tuple[bool, str]:
         doctor = session.get(Doctor, doctor_id)
         if not doctor:
             return False, "Врач не найден."
+
+        exists = session.scalar(
+            select(AppointmentSlot).where(
+                AppointmentSlot.doctor_id == doctor_id,
+                AppointmentSlot.date_time == date_time,
+            )
+        )
+        if exists is not None:
+            return False, "Такой слот у этого врача уже существует."
 
         slot = AppointmentSlot(doctor_id=doctor_id, date_time=date_time, is_busy=False)
         session.add(slot)
